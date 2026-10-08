@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BFSContext — Dual-Track Context Slicing Live Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    pre code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <div class="h-9 w-9 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center font-black text-emerald-400">
+        ⚡
+      </div>
+      <div>
+        <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+          BFSContext <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">CapsuleMCP Gateway</span>
+        </h1>
+        <p class="text-xs text-slate-400">Better. Faster. Smaller Context — Multi-Agent Causal Slicing vs. Naive Fork</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="text-xs text-slate-400 flex items-center gap-1.5">
+        <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        Gemini Flash Orchestrator Active
+      </span>
+    </div>
+  </header>
+
+  <main class="flex-1 p-6 max-w-7xl mx-auto w-full space-y-6">
+
+    <!-- Control Bar -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Target Module</label>
+          <select id="targetFile" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+            <option value="demo/sample_repo/src/billing.py" data-symbol="charge_user" data-task="Write pytest tests for charge_user verifying that balance is deducted and returns status success." data-intent="Verify Stripe v3 webhook billing flow">src/billing.py (charge_user)</option>
+            <option value="demo/sample_repo/src/auth.py" data-symbol="authenticate_user" data-task="Write a pytest test verifying authenticate_user returns a valid JWT string on correct credentials." data-intent="Stateless authentication audit">src/auth.py (authenticate_user)</option>
+            <option value="demo/sample_repo/src/database.py" data-symbol="connect" data-task="Write a test for connect() verifying connection retry and DatabaseError handling." data-intent="Database resilience audit">src/database.py (connect)</option>
+            <option value="capsule_engine.py" data-symbol="slice_code_target" data-task="Write a unit test verifying slice_code_target extracts functions and preserves imports cleanly." data-intent="Verify AST slicing core">capsule_engine.py (slice_code_target)</option>
+            <option value="circuit_breaker.py" data-symbol="extract_code" data-task="Write a test for extract_code verifying markdown codeblock extraction and clean fallback." data-intent="Harden guardrail sanitizer">circuit_breaker.py (extract_code)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Subtask Instruction</label>
+          <input type="text" id="subtaskInput" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500" value="Write pytest tests for charge_user verifying balance deduction.">
+        </div>
+
+        <div class="flex items-end">
+          <button id="runBtn" onclick="runComparison()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 px-4 rounded-lg transition duration-150 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20">
+            <span id="btnIcon">▶</span>
+            <span id="btnText">Run Side-by-Side Comparison</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Telemetry KPI Bar -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <div class="text-xs text-slate-400 font-medium">Token Reduction</div>
+        <div class="text-2xl font-black text-emerald-400 mt-1" id="kpiReduction">-%</div>
+        <div class="text-xs text-slate-500 mt-1" id="kpiTokensSaved">0 tokens slashed</div>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <div class="text-xs text-slate-400 font-medium">Latency Speedup</div>
+        <div class="text-2xl font-black text-blue-400 mt-1" id="kpiSpeedup">-x</div>
+        <div class="text-xs text-slate-500 mt-1" id="kpiLatencyDiff">0.00s faster</div>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <div class="text-xs text-slate-400 font-medium">AST Slicing Overhead</div>
+        <div class="text-2xl font-black text-purple-400 mt-1" id="kpiCompileTime">- ms</div>
+        <div class="text-xs text-slate-500 mt-1">Local CPU AST parsing</div>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <div class="text-xs text-slate-400 font-medium">Guardrail & Hash-Pin</div>
+        <div class="text-2xl font-black text-teal-400 mt-1" id="kpiGuardrail">PASSED</div>
+        <div class="text-xs text-slate-500 mt-1" id="kpiSha">HEAD commit pinned</div>
+      </div>
+    </div>
+
+    <!-- Side-by-Side Comparison Workspace -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- Column 1: Traditional Full Context Fork -->
+      <div class="bg-slate-900 border border-red-500/20 rounded-xl flex flex-col overflow-hidden shadow-xl">
+        <div class="bg-red-950/30 border-b border-red-500/20 px-5 py-3.5 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="h-2.5 w-2.5 rounded-full bg-red-400"></span>
+            <h2 class="font-bold text-sm text-red-200">Traditional Delegation (Full Context Fork)</h2>
+          </div>
+          <span class="text-xs bg-red-500/10 text-red-300 px-2 py-0.5 rounded border border-red-500/20 font-mono" id="tokensFullBadge">
+            ~3,000 tokens
+          </span>
+        </div>
+
+        <div class="p-4 space-y-4 flex-1 flex flex-col">
+          <div>
+            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+              <span>Input Context Payload</span>
+              <span class="text-[10px] text-red-400">Bloated Transcript & Unrelated Code</span>
+            </div>
+            <pre class="bg-slate-950 border border-slate-800 p-3 rounded-lg text-xs font-mono text-slate-400 h-44 overflow-y-auto leading-relaxed"><code id="inputFullCode">// Select a module and click Run...</code></pre>
+          </div>
+
+          <div class="flex-1 flex flex-col">
+            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+              <span>Sub-Agent Output Artifact</span>
+              <span class="text-[10px] text-slate-400" id="latencyFullBadge">Latency: 0.00s</span>
+            </div>
+            <pre class="bg-slate-950 border border-slate-800 p-3 rounded-lg text-xs font-mono text-slate-300 flex-1 min-h-[220px] overflow-y-auto leading-relaxed"><code id="outputFullCode">// Output from full context worker will appear here...</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Column 2: BFSContext (Our Solution) -->
+      <div class="bg-slate-900 border border-emerald-500/30 rounded-xl flex flex-col overflow-hidden shadow-xl">
+        <div class="bg-emerald-950/30 border-b border-emerald-500/20 px-5 py-3.5 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
+            <h2 class="font-bold text-sm text-emerald-200">BFSContext (Dual-Track Capsule Slicing)</h2>
+          </div>
+          <span class="text-xs bg-emerald-500/10 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30 font-mono" id="tokensCapsuleBadge">
+            ~400 tokens (-86%)
+          </span>
+        </div>
+
+        <div class="p-4 space-y-4 flex-1 flex flex-col">
+          <div>
+            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+              <span>Compiled Context Capsule</span>
+              <span class="text-[10px] text-emerald-400">Target AST + 1-Hop + Pinned Intent</span>
+            </div>
+            <pre class="bg-slate-950 border border-slate-800 p-3 rounded-lg text-xs font-mono text-emerald-300/90 h-44 overflow-y-auto leading-relaxed"><code id="inputCapsuleCode">// Compiled capsule prompt will appear here...</code></pre>
+          </div>
+
+          <div class="flex-1 flex flex-col">
+            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+              <span>Sub-Agent Output Artifact</span>
+              <span class="text-[10px] text-emerald-400" id="latencyCapsuleBadge">Latency: 0.00s (Fast)</span>
+            </div>
+            <pre class="bg-slate-950 border border-slate-800 p-3 rounded-lg text-xs font-mono text-emerald-200 flex-1 min-h-[220px] overflow-y-auto leading-relaxed"><code id="outputCapsuleCode">// Output from BFSContext worker will appear here...</code></pre>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <script>
+    const targetSelect = document.getElementById('targetFile');
+    const subtaskInput = document.getElementById('subtaskInput');
+
+    targetSelect.addEventListener('change', () => {
+      const opt = targetSelect.selectedOptions[0];
+      subtaskInput.value = opt.getAttribute('data-task');
+    });
+
+    async function runComparison() {
+      const opt = targetSelect.selectedOptions[0];
+      const targetFile = targetSelect.value;
+      const targetSymbol = opt.getAttribute('data-symbol');
+      const subtask = subtaskInput.value;
+      const intent = opt.getAttribute('data-intent');
+
+      const btn = document.getElementById('runBtn');
+      const btnIcon = document.getElementById('btnIcon');
+      const btnText = document.getElementById('btnText');
+
+      btn.disabled = true;
+      btn.classList.add('opacity-75', 'cursor-not-allowed');
+      btnIcon.innerHTML = '⏳';
+      btnText.innerText = 'Running Side-by-Side Slicing & Delegation...';
+
+      try {
+        const resp = await fetch('/api/compare', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            file_path: targetFile,
+            target_symbol: targetSymbol,
+            subtask: subtask,
+            intent: intent
+          })
+        });
+
+        const data = await resp.json();
+
+        // Update KPIs
+        document.getElementById('kpiReduction').innerText = `${data.reduction_percent}%`;
+        document.getElementById('kpiTokensSaved').innerText = `${data.tokens_saved.toLocaleString()} tokens saved`;
+        document.getElementById('kpiSpeedup').innerText = `${data.speedup}x`;
+        document.getElementById('kpiLatencyDiff').innerText = `${data.latency_diff}s faster`;
+        document.getElementById('kpiCompileTime').innerText = `${data.compile_time_ms} ms`;
+        document.getElementById('kpiSha').innerText = `Commit SHA: ${data.commit_sha.substring(0, 8)}`;
+
+        // Update Badges
+        document.getElementById('tokensFullBadge').innerText = `${data.tok_in_full.toLocaleString()} tokens`;
+        document.getElementById('tokensCapsuleBadge').innerText = `${data.tok_in_capsule.toLocaleString()} tokens (-${data.reduction_percent}%)`;
+        document.getElementById('latencyFullBadge').innerText = `Latency: ${data.lat_full}s`;
+        document.getElementById('latencyCapsuleBadge').innerText = `Latency: ${data.lat_capsule}s`;
+
+        // Update Code Areas
+        document.getElementById('inputFullCode').innerText = data.full_prompt_text;
+        document.getElementById('outputFullCode').innerText = data.output_full;
+        document.getElementById('inputCapsuleCode').innerText = data.capsule_prompt;
+        document.getElementById('outputCapsuleCode').innerText = data.output_capsule;
+
+      } catch (err) {
+        alert('Comparison failed: ' + err);
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('opacity-75', 'cursor-not-allowed');
+        btnIcon.innerHTML = '▶';
+        btnText.innerText = 'Run Side-by-Side Comparison';
+      }
+    }
+
+    // Auto-trigger on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      runComparison();
+    });
+  </script>
+</body>
+</html>
