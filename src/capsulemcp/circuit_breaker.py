@@ -201,6 +201,9 @@ class CircuitBreaker:
                 target_file_path=str(target_file),
             )
 
+        # Check if the target file already had uncommitted modifications prior to guardrail execution
+        pre_existing_modified = is_file_modified_in_git(target_path, self.repo_path) if apply_to_disk else False
+
         # 1. Markdown fence normalization
         sanitized_code = strip_markdown_fences(worker_code)
 
@@ -266,12 +269,11 @@ class CircuitBreaker:
         user_mods_protected = False
 
         if apply_to_disk:
-            # Inspect git status to protect unrelated pre-existing modifications
-            if is_file_modified_in_git(target_path, self.repo_path):
-                # Target file had pre-existing uncommitted modifications; do NOT destroy user work!
+            # If target file already had pre-existing modifications prior to this operation, protect them
+            if pre_existing_modified:
                 user_mods_protected = True
                 logger.warning(
-                    "Target file %s had pre-existing modifications in git. Skipping overwrite/rollback to protect user work.",
+                    "Target file %s had pre-existing modifications prior to run. Preserving user modifications.",
                     target_path,
                 )
             elif commit_sha:

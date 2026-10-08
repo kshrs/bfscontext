@@ -146,6 +146,19 @@ class ContextCompiler:
             intent_hint=intent_summary,
         )
 
+        trace_log = [
+            f"TARGET: {target_path.name}:{target_unit_name or 'auto'}",
+            f"parse target ({target_path.name})",
+            f"collect imports ({len(imports)} statements)",
+            f"resolve target unit: {target_unit.name} ({target_unit.unit_type})",
+            f"bounded traversal (depth={dependency_depth}): {len(dependencies)} dependencies resolved",
+            f"retrieve intent (commit: {git_head_sha[:8]})",
+            f"check Git SHA ({git_head_sha[:8]})",
+            "assemble capsule",
+            "tokenize",
+            "return capsule",
+        ]
+
         # 3. Construct Context Capsule
         capsule = ContextCapsule(
             task_instructions=subtask_description,
@@ -155,6 +168,7 @@ class ContextCompiler:
             dependencies=dependencies,
             git_head_sha=git_head_sha,
             target_file_path=rel_file_str,
+            compilation_trace=trace_log,
         )
 
         # 4. Token Metrics Calculation

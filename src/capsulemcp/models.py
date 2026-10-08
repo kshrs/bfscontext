@@ -83,6 +83,7 @@ class ContextCapsule:
     git_head_sha: str
     target_file_path: str
     token_metrics: Optional[TokenMetrics] = None
+    compilation_trace: List[str] = field(default_factory=list)
 
     def render(self) -> str:
         """Render the structured capsule string deterministically."""

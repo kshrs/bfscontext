@@ -12,9 +12,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import json
-import time
 from pathlib import Path
+import sys
+import time
 from typing import Any, Dict, List, Set
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from benchmark.baselines import (
     generate_capsule_context,

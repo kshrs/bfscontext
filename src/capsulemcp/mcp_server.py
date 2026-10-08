@@ -72,6 +72,7 @@ class DelegationResponse:
     dependencies: List[Dict[str, Any]]
     worker_result: Dict[str, Any]
     guardrail: Dict[str, Any]
+    compilation_trace: List[str] = field(default_factory=list)
     error: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
@@ -87,6 +88,7 @@ class DelegationResponse:
             "dependencies": self.dependencies,
             "worker_result": self.worker_result,
             "guardrail": self.guardrail,
+            "compilation_trace": self.compilation_trace,
             "error": self.error,
         }
 
@@ -165,6 +167,11 @@ class CapsuleMCPServer:
                             "type": "string",
                             "description": "Repository root path (defaults to server repo_path).",
                         },
+                        "apply_to_disk": {
+                            "type": "boolean",
+                            "description": "Whether to safely write validated output to disk (default: false).",
+                            "default": False,
+                        },
                     },
                     "required": ["target_file", "subtask"],
                 },
@@ -218,6 +225,7 @@ class CapsuleMCPServer:
             max_depth = 1
 
         request_id = args.get("request_id") or str(uuid.uuid4())
+        apply_to_disk = bool(args.get("apply_to_disk", False))
 
         return DelegationRequest(
             target_file=str(resolved_target.relative_to(active_repo)),
@@ -227,6 +235,7 @@ class CapsuleMCPServer:
             target_symbol=args.get("target_symbol"),
             max_dependency_depth=max_depth,
             repo_path=str(active_repo),
+            apply_to_disk=apply_to_disk,
             request_id=str(request_id),
         )
 
@@ -320,6 +329,7 @@ class CapsuleMCPServer:
                 dependencies=dep_info,
                 worker_result=worker_res,
                 guardrail=guardrail_res.to_dict(),
+                compilation_trace=capsule.compilation_trace,
             )
             resp_dict = resp.to_dict()
             resp_dict["latency_telemetry"] = latency_breakdown
