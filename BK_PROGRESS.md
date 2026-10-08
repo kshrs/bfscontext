@@ -46,7 +46,7 @@
 ### Milestone 4: Configuration & CLI Integration
 - **Planned:**
   - Create `mcp_config.json` with stdio transport configuration for `agy CLI` and `claude-code` integration
-- **Status:** Pending
+- **Status:** ✅ Completed (`mcp_config.json` configured with stdio launcher for `bfscontext-gateway`)
 - **Next:** Milestone 5 (Refactor, Cleanup & Final Audit)
 
 ---
