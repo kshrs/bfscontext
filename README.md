@@ -214,6 +214,35 @@ CapsuleMCP enforces a **One-Strike Circuit Breaker**:
 
 ---
 
+## Real Worker LLM Integration
+
+CapsuleMCP supports live LLM providers (OpenAI, OpenRouter, DeepSeek, or any OpenAI-compatible API) via [`RealWorkerProvider`](file:///C:/Users/LENOVO/Desktop/bfscontext/src/capsulemcp/adapters/real_worker.py):
+
+### Architectural Boundary & Capsule-Only Proof
+The real worker receives **ONLY the compiled Context Capsule and task prompt**. It never receives raw uncompiled repository dumps, conversational history, or unreferenced codebase modules.
+
+### Configuration via Environment Variables
+- `CAPSULEMCP_API_KEY`: Model provider API key.
+- `CAPSULEMCP_MODEL`: Model identifier (defaults to `gpt-4o-mini`).
+- `CAPSULEMCP_BASE_URL`: Endpoint URL (defaults to `https://api.openai.com/v1`).
+
+```bash
+# Windows PowerShell
+$env:CAPSULEMCP_API_KEY = "sk-..."
+$env:CAPSULEMCP_MODEL   = "gpt-4o-mini"
+```
+
+If no API key is set, the system gracefully informs the operator without crashing. `MockWorkerProvider` remains the default for unit tests.
+
+### Telemetry Latency Breakdown
+Live delegations separate and record high-resolution latency telemetry:
+- `compilation_latency_ms`: Time taken by algorithmic AST context compiler.
+- `worker_latency_ms`: Actual network and model inference duration.
+- `guardrail_latency_ms`: Static syntax compilation and structural contract check.
+- `total_request_latency_ms`: Complete round-trip duration.
+
+---
+
 ## Installation
 
 ```bash
@@ -229,7 +258,7 @@ pip install -r requirements-dev.txt
 
 ## Running Tests
 
-Execute the comprehensive 50-test test suite:
+Execute the comprehensive 55-test test suite:
 
 ```bash
 pytest -v
@@ -254,9 +283,15 @@ python demo/run_mcp_demo.py
 python demo/run_failure_demo.py
 ```
 
-4. Run the automated multi-target benchmark:
+4. Run the Real Worker Provider demo:
+```bash
+python demo/run_real_worker_demo.py
+```
+
+5. Run the automated multi-target benchmark:
 ```bash
 python benchmark/run_benchmark.py
 ```
+
 
 

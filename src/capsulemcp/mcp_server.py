@@ -35,6 +35,7 @@ from capsulemcp.adapters.interfaces import CodeAnalyzer, FixerProvider, IntentPr
 from capsulemcp.adapters.mock.mock_intent import MockIntentProvider
 from capsulemcp.adapters.mock.mock_telemetry import MockTelemetrySink
 from capsulemcp.adapters.mock.mock_worker import MockWorkerProvider
+from capsulemcp.adapters.real_worker import RealWorkerProvider
 from capsulemcp.ast_extractor import ASTExtractor, UnitNotFoundError, UnsupportedLanguageError
 from capsulemcp.circuit_breaker import CircuitBreaker, GuardrailResult, GuardrailStatus
 from capsulemcp.context_compiler import ContextCompiler
@@ -241,7 +242,8 @@ class CapsuleMCPServer:
             req = self._validate_request(kwargs)
             request_id = req.request_id
 
-            # Compile context capsule with traceable metadata
+            # 1. Compile context capsule with traceable metadata
+            t_comp_start = time.perf_counter()
             capsule = self.compiler.generate_context_capsule(
                 file_path=req.target_file,
                 subtask_description=req.subtask,
@@ -255,15 +257,23 @@ class CapsuleMCPServer:
                     "caller": "CapsuleMCPServer",
                 },
             )
+            comp_latency_ms = (time.perf_counter() - t_comp_start) * 1000.0
 
-            # Delegate to worker provider (MockWorkerProvider for now)
-            t_worker = time.perf_counter()
-            worker_res = self.worker_provider.generate(capsule)
-            worker_lat_ms = (time.perf_counter() - t_worker) * 1000.0
+            # 2. Select Worker Provider based on worker_model
+            active_worker = self.worker_provider
+            if req.worker_model not in ("mock", "mock-claude-worker") and not isinstance(self.worker_provider, RealWorkerProvider):
+                # Dynamically instantiate RealWorkerProvider for requested real model if server default is mock
+                active_worker = RealWorkerProvider(model=req.worker_model)
+
+            # 3. Delegate to worker provider (sends ONLY the capsule)
+            t_worker_start = time.perf_counter()
+            worker_res = active_worker.generate(capsule)
+            worker_lat_ms = (time.perf_counter() - t_worker_start) * 1000.0
             worker_res["worker_latency_ms"] = round(worker_lat_ms, 2)
             worker_res["request_id"] = request_id
 
-            # Pass worker output through One-Strike Guardrail / Circuit Breaker
+            # 4. Pass worker output through One-Strike Guardrail / Circuit Breaker
+            t_guard_start = time.perf_counter()
             generated_code = worker_res.get("generated_code", "")
             guardrail_res = self.guardrail.evaluate_and_guard(
                 worker_code=generated_code,
@@ -272,6 +282,16 @@ class CapsuleMCPServer:
                 commit_sha=capsule.git_head_sha,
                 apply_to_disk=req.apply_to_disk,
             )
+            guard_latency_ms = (time.perf_counter() - t_guard_start) * 1000.0
+            total_latency_ms = (time.perf_counter() - t0) * 1000.0
+
+            # 5. Record extended latency telemetry
+            latency_breakdown = {
+                "compilation_latency_ms": round(comp_latency_ms, 2),
+                "worker_latency_ms": round(worker_lat_ms, 2),
+                "guardrail_latency_ms": round(guard_latency_ms, 2),
+                "total_request_latency_ms": round(total_latency_ms, 2),
+            }
 
             dep_info = [
                 {
@@ -301,7 +321,9 @@ class CapsuleMCPServer:
                 worker_result=worker_res,
                 guardrail=guardrail_res.to_dict(),
             )
-            return resp.to_dict()
+            resp_dict = resp.to_dict()
+            resp_dict["latency_telemetry"] = latency_breakdown
+            return resp_dict
 
         except Exception as e:
             logger.warning("Delegation error in MCP server: %s", e)
