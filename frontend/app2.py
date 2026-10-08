@@ -224,16 +224,33 @@ def run_dual_benchmark():
     Persists test run to JSON file and returns payload for streaming frontend.
     """
     data = request.json or {}
-    query = data.get("query", "").strip() or "Write a high-performance circular buffer test suite for streaming telemetry"
-
+    raw_query = data.get("query", "").strip() or "Write a high-performance circular buffer test suite for streaming telemetry"
     head_sha = get_git_head_sha()
 
-    # 1. Retrieve full context metadata
+    # Check for --f simulation flag in query or JSON payload
+    use_simulation = False
+    query = raw_query
+    if " --f" in query or query.endswith("--f"):
+        use_simulation = True
+        query = re.sub(r"\s*--f\b", "", query).strip()
+    elif data.get("simulate", False):
+        use_simulation = True
+
+    # 1. Retrieve full context turns from database
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+    cursor.execute("SELECT role, content FROM chat_turns WHERE session_id = 'viz_project_alpha' ORDER BY turn_index ASC")
+    chat_rows = cursor.fetchall()
     cursor.execute("SELECT SUM(token_count) FROM chat_turns WHERE session_id = 'viz_project_alpha'")
-    full_tokens_count = cursor.fetchone()[0] or 91110
+    db_tokens_count = cursor.fetchone()[0] or 91110
+    full_tokens_count = db_tokens_count
     conn.close()
+
+    # Build full conversational history string
+    full_history_lines = []
+    for r_role, r_content in chat_rows:
+        full_history_lines.append(f"[{r_role.upper()}]:\n{r_content}")
+    full_transcript_str = "\n\n".join(full_history_lines)
 
     # 2. Match or Extract symbol dynamically from user prompt
     KNOWN_CONTRACTS = {
@@ -404,24 +421,43 @@ Answer the task immediately and directly. Do NOT explain who you are or introduc
     capsule_text, capsule_lat, reported_tokens = call_gemini_api(capsule_prompt, max_tokens=2500)
 
     # 6. Execute Real Gemini Call for Left Side (Full Context Representation)
-    full_llm_prompt = f"""You are analyzing the full history of the NeuralMesh Viz engineering session (264 turns, {full_tokens_count:,} tokens discussing WebGL rendering, Octree pools, Canvas HUD, and memory leaks).
+    if use_simulation:
+        full_tokens_count = db_tokens_count
+        simulated_full_prompt = f"""You are analyzing the full history of the NeuralMesh Viz engineering session (264 turns, {full_tokens_count:,} tokens discussing WebGL rendering, Octree pools, Canvas HUD, and memory leaks).
 
 Answer this developer request directly and thoroughly:
 {query}
 
 INSTRUCTIONS:
 Answer the query directly and completely. Do not include boilerplate preamble."""
-    raw_full_text, raw_full_lat, _ = call_gemini_api(full_llm_prompt, max_tokens=2500)
-
-    full_text = f"""// [FULL CONTEXT INGESTION: {full_tokens_count:,} TOKENS PREFILLED]
+        raw_full_text, raw_full_lat, _ = call_gemini_api(simulated_full_prompt, max_tokens=2500)
+        full_lat = round(max(5.8, capsule_lat * 4.2), 2)
+        full_text = f"""// [FULL CONTEXT INGESTION: {full_tokens_count:,} TOKENS PREFILLED (SIMULATION MODE: --f)]
 // Simulated prefill latency overhead: 12-18s on large GPU clusters
 
 {raw_full_text}"""
+    else:
+        # REAL FULL-CONTEXT INGESTION: Sends the actual ~91k-121k tokens of conversation history
+        full_real_prompt = f"""[FULL REPOSITORY CONVERSATIONAL HISTORY ARCHIVE ({db_tokens_count:,} TOKENS)]:
+{full_transcript_str}
 
-    tokens_saved = full_tokens_count - capsule_tokens
-    reduction_pct = round((tokens_saved / full_tokens_count) * 100, 2)
-    full_lat = round(max(5.8, capsule_lat * 4.2), 2)
-    speedup = round(full_lat / capsule_lat, 1)
+================================================================================
+[ACTIVE DEVELOPER TASK]:
+{query}
+
+INSTRUCTIONS:
+Answer the developer task directly and thoroughly using the full context provided above."""
+        raw_full_text, real_full_lat, real_reported_tokens = call_gemini_api(full_real_prompt, max_tokens=2500)
+        full_tokens_count = real_reported_tokens
+        full_lat = round(real_full_lat, 2)
+        full_text = f"""// [FULL CONTEXT INGESTION: {full_tokens_count:,} REAL TOKENS INGESTED]
+// Real LLM call with full conversational history transcript
+
+{raw_full_text}"""
+
+    tokens_saved = max(0, full_tokens_count - capsule_tokens)
+    reduction_pct = round((tokens_saved / max(1, full_tokens_count)) * 100, 2)
+    speedup = round(full_lat / max(0.01, capsule_lat), 1)
 
     cache_metrics = CACHE_MGR.get_system_metrics()
     host_ram_kb = round(cache_metrics["l1_ram_bytes_est"] / 1024, 1)
