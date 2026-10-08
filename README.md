@@ -102,6 +102,73 @@ Evaluated across:
 
 ---
 
+## Model Context Protocol (MCP) Integration
+
+CapsuleMCP exposes its compilation and delegation capabilities through a thin MCP Server layer (`src/capsulemcp/mcp_server.py`).
+
+### MCP Flow
+
+```
+AGY / Orchestrator Agent
+          ↓
+  MCP Tool: delegate_with_capsule
+          ↓
+  Input Validation & Security Guardrails (Path Traversal Protection)
+          ↓
+  Context Compiler (Track A AST + Track B Intent)
+          ↓
+  Minimal Context Capsule
+          ↓
+  Worker Provider (Mock / Pluggable)
+          ↓
+  Telemetry Sink (Traceable request_id)
+          ↓
+  Structured Response JSON
+```
+
+### Primary MCP Tool: `delegate_with_capsule`
+
+#### Parameters:
+- `target_file` (string, required): Relative path to target file within repository.
+- `subtask` (string, required): Specific prompt or implementation requirement.
+- `intent` (string, optional): Architectural intent or PR summary.
+- `target_symbol` (string, optional): Specific function, class, or method name.
+- `worker_model` (string, optional, default: `"mock"`): Target worker identifier.
+- `max_dependency_depth` (integer, optional, default: `1`): Bounded dependency depth ($0, 1, 2$).
+- `repo_path` (string, optional): Repository root directory.
+
+#### Example MCP Response:
+```json
+{
+  "status": "success",
+  "request_id": "eced62db-602e-45f3-9631-a00b76669871",
+  "target_file": "src/billing.py",
+  "target_symbol": "charge_user",
+  "commit_sha": "33b86a40250890c6fdd781eb014ab2073b30e72d",
+  "is_intent_stale": false,
+  "capsule_prompt": "[TASK INSTRUCTIONS]\n...\n[IMMUTABLE CODE CONTRACTS]\n...\n[DEPENDENCIES]\n...",
+  "token_metrics": {
+    "raw_context_tokens": 712,
+    "capsule_tokens": 652,
+    "tokens_saved": 60,
+    "reduction_percent": 8.43,
+    "tokenizer_name": "tiktoken:cl100k_base"
+  },
+  "dependencies": [
+    { "name": "PaymentError", "file": "src/billing.py", "type": "class", "is_direct": true }
+  ],
+  "worker_result": {
+    "status": "success",
+    "is_mock": true,
+    "disclaimer": "MOCK / DEMO ONLY - Simulated worker response",
+    "worker_latency_ms": 0.0,
+    "generated_code": "# Generated test stub..."
+  }
+}
+```
+
+---
+
 ## Installation
 
 ```bash
@@ -117,7 +184,7 @@ pip install -r requirements-dev.txt
 
 ## Running Tests
 
-Execute the 32-test regression test suite:
+Execute the comprehensive 41-test test suite:
 
 ```bash
 pytest -v
@@ -125,16 +192,20 @@ pytest -v
 
 ---
 
-## Running the Demo & Benchmark
+## Running Demos & Benchmarks
 
-Run the realistic demo against `demo/sample_repo`:
-
+1. Run the core context compiler demo:
 ```bash
 python demo/run_demo.py
 ```
 
-Run the automated reproducible benchmark:
+2. Run the end-to-end MCP server delegation demo:
+```bash
+python demo/run_mcp_demo.py
+```
 
+3. Run the automated multi-target benchmark:
 ```bash
 python benchmark/run_benchmark.py
 ```
+

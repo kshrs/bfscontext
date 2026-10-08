@@ -8,7 +8,7 @@ from __future__ import annotations
 import ast
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from capsulemcp.adapters.interfaces import CodeAnalyzer, IntentProvider, TelemetrySink
 from capsulemcp.adapters.mock.mock_intent import MockIntentProvider
@@ -81,6 +81,7 @@ class ContextCompiler:
         target_unit_name: Optional[str] = None,
         repo_path: Optional[str] = None,
         dependency_depth: int = 1,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> ContextCapsule:
         """
         Compiles the minimal sufficient ContextCapsule.
@@ -92,6 +93,7 @@ class ContextCompiler:
             target_unit_name: Optional explicit name of the function or class.
             repo_path: Optional override for the repository path.
             dependency_depth: Maximum hops for bounded dependency traversal (default 1).
+            metadata: Optional traceable metadata (e.g. request_id, caller info).
 
         Returns:
             A deterministic ContextCapsule object with rendered text and token metrics.
@@ -173,7 +175,7 @@ class ContextCompiler:
 
         # 5. Record Telemetry
         if self.telemetry_sink:
-            self.telemetry_sink.record_compilation(capsule, metrics)
+            self.telemetry_sink.record_compilation(capsule, metrics, metadata=metadata)
 
         return capsule
 

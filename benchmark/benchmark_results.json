@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "timestamp": "2026-10-08T11:25:29Z",
+    "timestamp": "2026-10-08T11:30:37Z",
     "benchmark_repo": "synthetic_multimodule_benchmark_repo",
     "tokenizer": "tiktoken:cl100k_base",
     "total_targets": 3
@@ -13,24 +13,24 @@
       "expected_structural_deps": [
         "class StripeGateway",
         "class BillingException",
-        "class GatewayResponse",
-        "class User"
+        "class User",
+        "class GatewayResponse"
       ],
       "unrelated_symbols": [
-        "class MetricsCollector",
-        "class S3Client",
-        "class InvoiceDataError",
-        "def generate_invoice",
-        "class EmailDispatcher",
+        "def calculate_prorated_tax",
         "def is_admin_user",
         "def format_invoice_line_item",
-        "def calculate_prorated_tax",
-        "def refund_transaction"
+        "def refund_transaction",
+        "class InvoiceDataError",
+        "class MetricsCollector",
+        "def generate_invoice",
+        "class S3Client",
+        "class EmailDispatcher"
       ],
       "full_context": {
         "tokens": 1265,
         "reduction_percent": 0.0,
-        "latency_ms": 13.38,
+        "latency_ms": 13.9,
         "dependency_recall": 1.0,
         "irrelevant_code_ratio": 1.0
       },
@@ -38,22 +38,22 @@
         "top_k_3": {
           "tokens": 504,
           "reduction_percent": 60.16,
-          "latency_ms": 3.03,
+          "latency_ms": 4.07,
           "dependency_recall": 0.5,
           "irrelevant_code_ratio": 0.56
         },
         "top_k_5": {
           "tokens": 733,
           "reduction_percent": 42.06,
-          "latency_ms": 2.88,
+          "latency_ms": 2.78,
           "dependency_recall": 0.5,
           "irrelevant_code_ratio": 0.67
         }
       },
       "capsule_compiler": {
-        "tokens": 546,
-        "reduction_percent": 56.84,
-        "latency_ms": 52.42,
+        "tokens": 548,
+        "reduction_percent": 56.68,
+        "latency_ms": 50.97,
         "dependency_recall": 1.0,
         "irrelevant_code_ratio": 0.0
       }
@@ -66,19 +66,19 @@
         "def hash_token"
       ],
       "unrelated_symbols": [
-        "class StripeGateway",
-        "class MetricsCollector",
         "class BillingException",
-        "class S3Client",
-        "def generate_invoice",
-        "class EmailDispatcher",
+        "class GatewayResponse",
         "def execute_user_charge",
-        "class GatewayResponse"
+        "class MetricsCollector",
+        "def generate_invoice",
+        "class S3Client",
+        "class EmailDispatcher",
+        "class StripeGateway"
       ],
       "full_context": {
         "tokens": 1265,
         "reduction_percent": 0.0,
-        "latency_ms": 13.38,
+        "latency_ms": 13.9,
         "dependency_recall": 1.0,
         "irrelevant_code_ratio": 1.0
       },
@@ -86,22 +86,22 @@
         "top_k_3": {
           "tokens": 453,
           "reduction_percent": 64.19,
-          "latency_ms": 2.98,
+          "latency_ms": 3.28,
           "dependency_recall": 1.0,
           "irrelevant_code_ratio": 0.12
         },
         "top_k_5": {
           "tokens": 733,
           "reduction_percent": 42.06,
-          "latency_ms": 2.92,
+          "latency_ms": 3.25,
           "dependency_recall": 1.0,
           "irrelevant_code_ratio": 0.38
         }
       },
       "capsule_compiler": {
-        "tokens": 284,
-        "reduction_percent": 77.55,
-        "latency_ms": 47.32,
+        "tokens": 286,
+        "reduction_percent": 77.39,
+        "latency_ms": 46.82,
         "dependency_recall": 1.0,
         "irrelevant_code_ratio": 0.0
       }
@@ -117,19 +117,19 @@
         "def format_invoice_line_item"
       ],
       "unrelated_symbols": [
-        "class StripeGateway",
-        "class MetricsCollector",
         "class BillingException",
-        "class EmailDispatcher",
-        "def execute_user_charge",
-        "def verify_signature",
         "class GatewayResponse",
-        "def hash_token"
+        "def execute_user_charge",
+        "class EmailDispatcher",
+        "class MetricsCollector",
+        "def hash_token",
+        "def verify_signature",
+        "class StripeGateway"
       ],
       "full_context": {
         "tokens": 1265,
         "reduction_percent": 0.0,
-        "latency_ms": 13.38,
+        "latency_ms": 13.9,
         "dependency_recall": 1.0,
         "irrelevant_code_ratio": 1.0
       },
@@ -137,22 +137,22 @@
         "top_k_3": {
           "tokens": 503,
           "reduction_percent": 60.24,
-          "latency_ms": 2.96,
+          "latency_ms": 2.94,
           "dependency_recall": 0.5,
           "irrelevant_code_ratio": 0.25
         },
         "top_k_5": {
           "tokens": 733,
           "reduction_percent": 42.06,
-          "latency_ms": 2.73,
+          "latency_ms": 2.65,
           "dependency_recall": 0.5,
           "irrelevant_code_ratio": 0.62
         }
       },
       "capsule_compiler": {
-        "tokens": 622,
-        "reduction_percent": 50.83,
-        "latency_ms": 45.88,
+        "tokens": 624,
+        "reduction_percent": 50.67,
+        "latency_ms": 50.59,
         "dependency_recall": 1.0,
         "irrelevant_code_ratio": 0.0
       }
@@ -160,9 +160,9 @@
   ],
   "aggregate": {
     "total_full_tokens": 3795,
-    "total_capsule_tokens": 1452,
-    "aggregate_reduction_percent": 61.74,
-    "mean_compilation_latency_ms": 48.54,
+    "total_capsule_tokens": 1458,
+    "aggregate_reduction_percent": 61.58,
+    "mean_compilation_latency_ms": 49.46,
     "mean_capsule_structural_recall": 1.0,
     "mean_capsule_irrelevant_code_ratio": 0.0,
     "vector_sim_totals": {
