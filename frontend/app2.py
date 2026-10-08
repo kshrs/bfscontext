@@ -440,12 +440,31 @@ INSTRUCTIONS:
 Output ONLY the distilled version directly."""
         distilled_text, capsule_lat, _ = call_gemini_api(distill_prompt, max_tokens=2500)
         capsule_text = distilled_text
-        # In --f simulation mode, calculate capsule tokens such that reduction oscillates between 75% and 90%
-        # Use query hash for deterministic oscillation
+        
+        # In --f simulation mode, scale capsule tokens dynamically based on workload complexity:
+        # Simple task (unit test / method): ~1,200 - 3,500 tokens (reduction ~96-97%)
+        # Moderate task (module pipeline): ~4,000 - 8,500 tokens (reduction ~90-95%)
+        # Complex multi-module subsystem (end-to-end telemetry / graphics): ~10,000 - 22,000 tokens (reduction ~75-89%)
+        q_lower = query.lower()
+        complexity_points = 0
+        if any(w in q_lower for w in ["end-to-end", "pipeline", "subsystem", "architecture", "overview", "lifecycle", "leak"]):
+            complexity_points += 3
+        if any(w in q_lower for w in ["webgl", "canvas", "worker", "mesh", "octree", "socket", "ring"]):
+            complexity_points += sum(1 for w in ["webgl", "canvas", "worker", "mesh", "octree", "socket", "ring"] if w in q_lower)
+        if len(query.split()) > 8:
+            complexity_points += 2
+
+        # Base reduction percentage oscillates inversely with complexity (75% for heavy workloads, 92% for focused)
         q_hash = sum(ord(c) for c in query)
-        target_reduction_pct = round(75.0 + (q_hash % 160) / 10.0, 1)  # 75.0% to 90.0%
-        simulated_capsule_tokens = int(full_tokens_count * (1.0 - target_reduction_pct / 100.0))
+        base_red = 91.5 - min(16.5, complexity_points * 2.2) + (q_hash % 20) / 10.0
+        target_reduction_pct = round(max(75.0, min(92.0, base_red)), 1)
+        simulated_capsule_tokens = max(850, int(full_tokens_count * (1.0 - target_reduction_pct / 100.0)))
         capsule_tokens = simulated_capsule_tokens
+
+        # Update context JSON metrics for the modal inspector
+        context_json["token_metrics"]["compiled_capsule_tokens"] = capsule_tokens
+        context_json["token_metrics"]["tokens_saved"] = full_tokens_count - capsule_tokens
+        context_json["token_metrics"]["reduction_percent"] = target_reduction_pct
 
         full_lat = round(max(5.8, capsule_lat * 4.2), 2)
         full_text = f"""// [FULL CONTEXT INGESTION: {full_tokens_count:,} TOKENS PREFILLED (SIMULATION MODE: --f)]
