@@ -187,13 +187,13 @@ def generate_context_capsule(
     Takes file path, subtask, and architectural intent, performs Dual-Track slicing,
     cryptographically pins commit state, and returns the ContextCapsuleResult.
     """
-    # 1. Read file content
+    # 1. Read file content (or initialize empty seed for new files)
     resolved_path = os.path.join(repo_path, file_path) if not os.path.isabs(file_path) else file_path
-    if not os.path.exists(resolved_path):
-        raise FileNotFoundError(f"Target file not found at: {resolved_path}")
-
-    with open(resolved_path, "r", encoding="utf-8", errors="replace") as f:
-        full_content = f.read()
+    if os.path.exists(resolved_path):
+        with open(resolved_path, "r", encoding="utf-8", errors="replace") as f:
+            full_content = f.read()
+    else:
+        full_content = f"# New artifact to be generated: {os.path.basename(file_path)}\n"
 
     # 2. Symbol resolution
     if not target_symbol:
