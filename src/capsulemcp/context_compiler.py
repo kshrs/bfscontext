@@ -5,6 +5,7 @@ Context Compiler: Algorithmic context compilation for multi-agent AI.
 
 from __future__ import annotations
 
+import ast
 import logging
 from pathlib import Path
 from typing import Optional
@@ -79,6 +80,7 @@ class ContextCompiler:
         intent_summary: Optional[str] = None,
         target_unit_name: Optional[str] = None,
         repo_path: Optional[str] = None,
+        dependency_depth: int = 1,
     ) -> ContextCapsule:
         """
         Compiles the minimal sufficient ContextCapsule.
@@ -89,6 +91,7 @@ class ContextCompiler:
             intent_summary: Optional intent hint to provide to the IntentProvider.
             target_unit_name: Optional explicit name of the function or class.
             repo_path: Optional override for the repository path.
+            dependency_depth: Maximum hops for bounded dependency traversal (default 1).
 
         Returns:
             A deterministic ContextCapsule object with rendered text and token metrics.
@@ -105,8 +108,7 @@ class ContextCompiler:
             tree, source, target_name=target_unit_name, subtask_description=subtask_description
         )
 
-        # Controlled 1-hop dependency expansion
-        # Find local AST node for target unit
+        # Controlled bounded dependency expansion
         target_node = None
         tree_body = getattr(tree, "body", None)
         if isinstance(tree_body, list):
@@ -114,12 +116,21 @@ class ContextCompiler:
                 if getattr(node, "name", None) == target_unit.name:
                     target_node = node
                     break
+                elif isinstance(node, ast.ClassDef):
+                    for subnode in node.body:
+                        if getattr(subnode, "name", None) == target_unit.name:
+                            target_node = subnode
+                            break
+                    if target_node is not None:
+                        break
         else:
             target_node = tree
 
         dependencies = []
         if target_node is not None:
-            dependencies = self.code_analyzer.extract_local_dependencies(target_path, target_node, tree)
+            dependencies = self.code_analyzer.extract_local_dependencies(
+                target_path, target_node, tree, max_depth=dependency_depth
+            )
 
         # Git HEAD SHA
         git_head_sha = get_git_head_sha(str(active_repo))
@@ -173,6 +184,7 @@ def generate_context_capsule(
     intent_summary: Optional[str] = None,
     repo_path: str = ".",
     target_unit_name: Optional[str] = None,
+    dependency_depth: int = 1,
 ) -> ContextCapsule:
     """Convenience functional API for context capsule generation."""
     compiler = ContextCompiler(repo_path=repo_path)
@@ -181,4 +193,6 @@ def generate_context_capsule(
         subtask_description=subtask_description,
         intent_summary=intent_summary,
         target_unit_name=target_unit_name,
+        dependency_depth=dependency_depth,
     )
+

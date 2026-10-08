@@ -44,8 +44,12 @@ class CodeAnalyzer(ABC):
         target_file_path: str | Path,
         target_unit_node: Any,
         tree: Any,
+        max_depth: int = 1,
     ) -> List[DependencyUnit]:
-        """Controlled 1-hop local dependency expansion."""
+        """
+        Controlled bounded dependency expansion up to max_depth (e.g. 0, 1, 2).
+        Guarantees termination, cyclic dependency protection, and deduplication.
+        """
         pass
 
 

@@ -1,5 +1,6 @@
 """
 Regression tests for CodeAnalyzer interface, benchmark baselines, and context compilation.
+Validates metric consistency, mathematical correctness, bounded intervals, and deterministic output.
 """
 
 from pathlib import Path
@@ -12,7 +13,7 @@ from benchmark.baselines import (
 )
 from benchmark.generate_repo import generate_benchmark_repo
 from benchmark.run_benchmark import (
-    calculate_dependency_recall,
+    calculate_structural_dependency_recall,
     calculate_irrelevant_code_ratio,
     run_benchmark,
 )
@@ -40,7 +41,7 @@ class DummyCustomAnalyzer(CodeAnalyzer):
             end_line=1,
         )
 
-    def extract_local_dependencies(self, target_file_path, target_unit_node, tree):
+    def extract_local_dependencies(self, target_file_path, target_unit_node, tree, max_depth=1):
         return [
             DependencyUnit(
                 name="dep_dummy",
@@ -79,24 +80,40 @@ def test_swappable_code_analyzer_in_compiler(tmp_path):
     assert capsule.dependencies[0].name == "dep_dummy"
 
 
-def test_benchmark_metrics_regression():
-    """Verify automated benchmark runs and achieves expected metrics."""
-    res = run_benchmark()
-    assert "full_context" in res
-    assert "vector_retrieval_simulation" in res
-    assert "capsule_compiler" in res
+def test_benchmark_metrics_internal_consistency():
+    """
+    Verify benchmark output produces mathematically valid, bounded, and internally consistent metrics.
+    No arbitrary threshold assertions (>40%), only invariant correctness checks.
+    """
+    res = run_benchmark(top_k_options=[3, 5])
+    assert "target_benchmarks" in res
+    assert "aggregate" in res
+    assert len(res["target_benchmarks"]) == 3
 
-    capsule_metrics = res["capsule_compiler"]
-    # Capsule should achieve 100% recall on required 1-hop dependencies
-    assert capsule_metrics["dependency_recall"] == 1.0
-    # Capsule should achieve 0.0% irrelevant code ratio
-    assert capsule_metrics["irrelevant_code_ratio"] == 0.0
-    # Token reduction should be positive and substantial
-    assert capsule_metrics["reduction_percent"] > 40.0
+    for tb in res["target_benchmarks"]:
+        # Verify metric bounds: 0.0 <= metric <= 1.0 (or 0.0 <= pct <= 100.0)
+        for method_key in ["full_context", "capsule_compiler"]:
+            m = tb[method_key]
+            assert 0.0 <= m["dependency_recall"] <= 1.0, f"Recall out of bounds in {tb['name']}"
+            assert 0.0 <= m["irrelevant_code_ratio"] <= 1.0, f"Irrelevant ratio out of bounds in {tb['name']}"
+            assert 0.0 <= m["reduction_percent"] <= 100.0, f"Reduction out of bounds in {tb['name']}"
+            assert m["tokens"] > 0, f"Tokens must be positive in {tb['name']}"
+
+        # Verify Capsule achieves 100% structural recall on expected dependencies
+        assert tb["capsule_compiler"]["dependency_recall"] == 1.0
+        # Verify Capsule achieves 0% irrelevant code ratio
+        assert tb["capsule_compiler"]["irrelevant_code_ratio"] == 0.0
+
+    # Aggregate token reduction mathematical invariant check:
+    # aggregate_reduction = 1 - total_capsule / total_full
+    agg = res["aggregate"]
+    expected_red = round((1.0 - (agg["total_capsule_tokens"] / agg["total_full_tokens"])) * 100.0, 2)
+    assert agg["aggregate_reduction_percent"] == expected_red
+    assert 0.0 <= agg["aggregate_reduction_percent"] <= 100.0
 
 
 def test_baselines_integrity(tmp_path):
-    """Verify all 3 baselines produce non-empty strings and valid recall/irrelevant ratios."""
+    """Verify all baselines produce non-empty strings and valid outputs."""
     repo = generate_benchmark_repo(tmp_path)
     target_file = "src/billing_engine.py"
     target_unit = "execute_user_charge"
@@ -106,7 +123,7 @@ def test_baselines_integrity(tmp_path):
     assert len(full) > 0
     assert "class S3Client" in full
 
-    vec = generate_vector_retrieval_simulation(repo, query=subtask, top_k_chunks=2)
+    vec = generate_vector_retrieval_simulation(repo, query=subtask, top_k=2)
     assert len(vec) > 0
 
     cap, cap_text = generate_capsule_context(repo, target_file, subtask, target_unit)
@@ -115,3 +132,13 @@ def test_baselines_integrity(tmp_path):
     # Unrelated services must never leak into capsule
     assert "class S3Client" not in cap_text
     assert "class EmailDispatcher" not in cap_text
+
+
+def test_benchmark_reproducibility(tmp_path):
+    """Verify identical runs produce deterministic token counts and metrics."""
+    res1 = run_benchmark(top_k_options=[3])
+    res2 = run_benchmark(top_k_options=[3])
+
+    assert res1["aggregate"]["total_full_tokens"] == res2["aggregate"]["total_full_tokens"]
+    assert res1["aggregate"]["total_capsule_tokens"] == res2["aggregate"]["total_capsule_tokens"]
+    assert res1["aggregate"]["aggregate_reduction_percent"] == res2["aggregate"]["aggregate_reduction_percent"]

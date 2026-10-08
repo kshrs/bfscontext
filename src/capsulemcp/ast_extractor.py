@@ -92,16 +92,22 @@ class ASTExtractor(CodeAnalyzer):
         """
         lines = source.splitlines()
 
-        # Collect candidate units
+        # Collect candidate units (top-level and class methods)
         candidates: List[Tuple[str, str, ast.AST, int, int]] = []
         for node in ast.iter_child_nodes(tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 candidates.append((node.name, "function", node, node.lineno, getattr(node, "end_lineno", node.lineno)))
             elif isinstance(node, ast.ClassDef):
                 candidates.append((node.name, "class", node, node.lineno, getattr(node, "end_lineno", node.lineno)))
+                # Also collect methods within the class
+                for subnode in ast.iter_child_nodes(node):
+                    if isinstance(subnode, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                        candidates.append((subnode.name, "method", subnode, subnode.lineno, getattr(subnode, "end_lineno", subnode.lineno)))
+                        # Also register qualified name e.g. AuthService.authenticate_user
+                        candidates.append((f"{node.name}.{subnode.name}", "method", subnode, subnode.lineno, getattr(subnode, "end_lineno", subnode.lineno)))
 
         if not candidates:
-            raise UnitNotFoundError("No top-level function or class definitions found in source file.")
+            raise UnitNotFoundError("No top-level or class function/class definitions found in source file.")
 
         selected = None
         if target_name:
@@ -173,87 +179,121 @@ class ASTExtractor(CodeAnalyzer):
                 names.add(subnode.value.id)
         return names
 
+    def _resolve_module_path(self, from_file_path: Path, module_name: str) -> Optional[Path]:
+        """Resolves local imported module path relative to source directory or repo root."""
+        target_dir = from_file_path.parent
+        candidate_paths = [
+            target_dir / f"{module_name.replace('.', '/')}.py",
+            self.repo_path / f"{module_name.replace('.', '/')}.py",
+            self.repo_path / "src" / f"{module_name.replace('.', '/')}.py",
+        ]
+        for cp in candidate_paths:
+            if cp.is_file():
+                return cp.resolve()
+        return None
+
     def extract_local_dependencies(
         self,
         target_file_path: str | Path,
         target_unit_node: ast.AST,
         tree: ast.AST,
+        max_depth: int = 1,
     ) -> List[DependencyUnit]:
         """
-        Controlled 1-hop dependency expansion:
-        Finds definitions referenced by the target unit within the same file or directly imported local modules.
+        Controlled bounded dependency expansion up to max_depth (e.g. 0, 1, 2).
+        Guarantees termination, cyclic dependency protection, and deduplication.
         """
+        if max_depth <= 0:
+            return []
+
         target_path = Path(target_file_path)
         if not target_path.is_absolute():
             target_path = (self.repo_path / target_path).resolve()
 
-        referenced_names = self.extract_referenced_names(target_unit_node)
+        # Track visited symbols: (resolved_file_path_str, symbol_name)
+        visited_symbols: Set[Tuple[str, str]] = set()
+        target_name = getattr(target_unit_node, "name", "")
+        visited_symbols.add((str(target_path), target_name))
+
         dependencies: List[DependencyUnit] = []
 
-        # 1. Check local top-level definitions within the same file (excluding target itself)
-        source = target_path.read_text(encoding="utf-8")
-        lines = source.splitlines()
+        # Queue items: (current_node, current_file_path, current_tree, current_depth)
+        queue = [(target_unit_node, target_path, tree, 1)]
 
-        for node in ast.iter_child_nodes(tree):
-            if node is target_unit_node:
+        # Cache parsed files: path -> (tree, source)
+        file_cache: Dict[str, Tuple[ast.AST, str]] = {
+            str(target_path): (tree, target_path.read_text(encoding="utf-8"))
+        }
+
+        while queue:
+            curr_node, curr_path, curr_tree, curr_depth = queue.pop(0)
+            if curr_depth > max_depth:
                 continue
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-                if node.name in referenced_names:
-                    start = node.lineno - 1
-                    end = getattr(node, "end_lineno", node.lineno)
-                    dep_code = "\n".join(lines[start:end])
-                    dependencies.append(
-                        DependencyUnit(
+
+            ref_names = self.extract_referenced_names(curr_node)
+            curr_source = file_cache[str(curr_path)][1]
+            curr_lines = curr_source.splitlines()
+
+            # 1. Local definitions in the SAME file
+            for node in ast.iter_child_nodes(curr_tree):
+                if node is curr_node:
+                    continue
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                    sym_key = (str(curr_path), node.name)
+                    if node.name in ref_names and sym_key not in visited_symbols:
+                        visited_symbols.add(sym_key)
+                        start = node.lineno - 1
+                        end = getattr(node, "end_lineno", node.lineno)
+                        dep_code = "\n".join(curr_lines[start:end])
+                        dep_unit = DependencyUnit(
                             name=node.name,
-                            file_path=str(target_path.relative_to(self.repo_path)),
+                            file_path=str(curr_path.relative_to(self.repo_path)),
                             unit_type="class" if isinstance(node, ast.ClassDef) else "function",
                             source_code=dep_code,
-                            is_direct=True,
+                            is_direct=(curr_depth == 1),
                         )
-                    )
+                        dependencies.append(dep_unit)
+                        if curr_depth + 1 <= max_depth:
+                            queue.append((node, curr_path, curr_tree, curr_depth + 1))
 
-        # 2. Check 1-hop local module imports
-        # For each from X import Y, check if X is a local file in repo_path
-        target_dir = target_path.parent
-        for node in ast.iter_child_nodes(tree):
-            if isinstance(node, ast.ImportFrom) and node.module:
-                module_parts = node.module.split(".")
-                # Candidates: relative to target_dir or relative to repo_path
-                candidate_paths = [
-                    target_dir / f"{node.module.replace('.', '/')}.py",
-                    self.repo_path / f"{node.module.replace('.', '/')}.py",
-                    self.repo_path / "src" / f"{node.module.replace('.', '/')}.py",
-                ]
-                found_path = None
-                for cp in candidate_paths:
-                    if cp.is_file():
-                        found_path = cp
-                        break
+            # 2. Local module imports in curr_tree
+            for node in ast.iter_child_nodes(curr_tree):
+                if isinstance(node, ast.ImportFrom) and node.module:
+                    resolved_mod_path = self._resolve_module_path(curr_path, node.module)
+                    if not resolved_mod_path:
+                        continue
 
-                if found_path:
-                    # Parse target dependency file and extract imported symbols
-                    try:
-                        dep_tree, dep_source = self.parse_file(found_path)
-                        dep_lines = dep_source.splitlines()
-                        imported_names = {alias.name for alias in node.names if alias.name in referenced_names}
+                    mod_str = str(resolved_mod_path)
+                    if mod_str not in file_cache:
+                        try:
+                            d_tree, d_source = self.parse_file(resolved_mod_path)
+                            file_cache[mod_str] = (d_tree, d_source)
+                        except Exception as e:
+                            logger.debug("Failed parsing dependency file %s: %s", resolved_mod_path, e)
+                            continue
 
-                        for dep_node in ast.iter_child_nodes(dep_tree):
-                            if isinstance(dep_node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-                                if dep_node.name in imported_names:
-                                    dep_start = dep_node.lineno - 1
-                                    dep_end = getattr(dep_node, "end_lineno", dep_node.lineno)
-                                    code = "\n".join(dep_lines[dep_start:dep_end])
-                                    dependencies.append(
-                                        DependencyUnit(
-                                            name=dep_node.name,
-                                            file_path=str(found_path.relative_to(self.repo_path)),
-                                            unit_type="class" if isinstance(dep_node, ast.ClassDef) else "function",
-                                            source_code=code,
-                                            is_direct=True,
-                                        )
-                                    )
-                    except Exception as e:
-                        logger.debug("Could not resolve local dependency %s: %s", found_path, e)
+                    dep_tree, dep_source = file_cache[mod_str]
+                    dep_lines = dep_source.splitlines()
+                    imported_names = {alias.name for alias in node.names if alias.name in ref_names}
+
+                    for d_node in ast.iter_child_nodes(dep_tree):
+                        if isinstance(d_node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                            sym_key = (mod_str, d_node.name)
+                            if d_node.name in imported_names and sym_key not in visited_symbols:
+                                visited_symbols.add(sym_key)
+                                d_start = d_node.lineno - 1
+                                d_end = getattr(d_node, "end_lineno", d_node.lineno)
+                                code = "\n".join(dep_lines[d_start:d_end])
+                                dep_unit = DependencyUnit(
+                                    name=d_node.name,
+                                    file_path=str(resolved_mod_path.relative_to(self.repo_path)),
+                                    unit_type="class" if isinstance(d_node, ast.ClassDef) else "function",
+                                    source_code=code,
+                                    is_direct=(curr_depth == 1),
+                                )
+                                dependencies.append(dep_unit)
+                                if curr_depth + 1 <= max_depth:
+                                    queue.append((d_node, resolved_mod_path, dep_tree, curr_depth + 1))
 
         return dependencies
 
