@@ -26,7 +26,22 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from src.capsulemcp.hierarchical_cache import HierarchicalCacheManager, DirectHashIndexer
+# Auto-configure sys.path so it works seamlessly on Windows (cmd, powershell) and Linux/macOS
+# without needing inline PYTHONPATH=src:.
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SRC_DIR = os.path.join(REPO_ROOT, "src")
+for p in [REPO_ROOT, SRC_DIR]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+# Global simulation flag set via command-line argument (e.g. python frontend/app2.py --f)
+GLOBAL_SIMULATE_MODE = "--f" in sys.argv or "-f" in sys.argv
+
+try:
+    from src.capsulemcp.hierarchical_cache import HierarchicalCacheManager, DirectHashIndexer
+except ImportError:
+    from capsulemcp.hierarchical_cache import HierarchicalCacheManager, DirectHashIndexer
+
 from capsule_engine import get_git_head_sha, estimate_tokens
 from seed_chat_history import build_chat_history_db
 
@@ -233,8 +248,8 @@ def run_dual_benchmark():
     raw_query = data.get("query", "").strip() or "Write a high-performance circular buffer test suite for streaming telemetry"
     head_sha = get_git_head_sha()
 
-    # Check for --f simulation flag in query or JSON payload
-    use_simulation = False
+    # Check for --f simulation flag in CLI arguments, query text, or JSON payload
+    use_simulation = GLOBAL_SIMULATE_MODE
     query = raw_query
     if " --f" in query or query.endswith("--f"):
         use_simulation = True
@@ -557,5 +572,6 @@ Answer the developer task directly and thoroughly using the full context provide
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    print(f"\n[⚡ BFSContext Frontend v2 Active at http://localhost:{port}]\n")
+    mode_label = "SIMULATION (--f active)" if GLOBAL_SIMULATE_MODE else "100% REAL LIVE INGESTION"
+    print(f"\n[⚡ BFSContext Server Active at http://localhost:{port} | Mode: {mode_label}]\n")
     app.run(host="0.0.0.0", port=port, debug=False)
