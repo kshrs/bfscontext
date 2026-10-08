@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "bfscontext-gateway": {
+      "command": "py",
+      "args": ["-m", "capsule_mcp"],
+      "env": {
+        "PYTHONPATH": "."
+      }
+    }
+  }
+}
