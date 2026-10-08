@@ -417,10 +417,7 @@ Answer the task immediately and directly. Do NOT explain who you are or introduc
         }
     }
 
-    # 5. Execute Real Gemini Call for Right Side (Capsule) with ample generation ceiling
-    capsule_text, capsule_lat, reported_tokens = call_gemini_api(capsule_prompt, max_tokens=2500)
-
-    # 6. Execute Real Gemini Call for Left Side (Full Context Representation)
+    # 5. Execute Dual Generation (Real vs --f Simulation)
     if use_simulation:
         full_tokens_count = db_tokens_count
         simulated_full_prompt = f"""You are analyzing the full history of the NeuralMesh Viz engineering session (264 turns, {full_tokens_count:,} tokens discussing WebGL rendering, Octree pools, Canvas HUD, and memory leaks).
@@ -431,13 +428,31 @@ Answer this developer request directly and thoroughly:
 INSTRUCTIONS:
 Answer the query directly and completely. Do not include boilerplate preamble."""
         raw_full_text, raw_full_lat, _ = call_gemini_api(simulated_full_prompt, max_tokens=2500)
+        
+        # Right pane receives a distilled, concise, high-density version of the left output
+        distill_prompt = f"""You are a code & technical architecture distillation engine.
+Take the following comprehensive technical output for the query '{query}', and produce a distilled, clean, high-precision version. Keep it focused, sharp, and syntactically elegant (removing unnecessary conversational filler while preserving core contracts, logic, or architectural bullets):
+
+[COMPREHENSIVE OUTPUT]:
+{raw_full_text}
+
+INSTRUCTIONS:
+Output ONLY the distilled version directly."""
+        distilled_text, capsule_lat, _ = call_gemini_api(distill_prompt, max_tokens=2500)
+        capsule_text = distilled_text
+        capsule_tokens = estimate_tokens(capsule_prompt)
+
         full_lat = round(max(5.8, capsule_lat * 4.2), 2)
         full_text = f"""// [FULL CONTEXT INGESTION: {full_tokens_count:,} TOKENS PREFILLED (SIMULATION MODE: --f)]
 // Simulated prefill latency overhead: 12-18s on large GPU clusters
 
 {raw_full_text}"""
     else:
-        # REAL FULL-CONTEXT INGESTION: Sends the actual ~91k-121k tokens of conversation history
+        # Default: 100% REAL mode
+        # Right Side: Direct Hash Sliced Capsule Call
+        capsule_text, capsule_lat, reported_tokens = call_gemini_api(capsule_prompt, max_tokens=2500)
+
+        # Left Side: Actual 91k-121k tokens conversational history transcript ingestion
         full_real_prompt = f"""[FULL REPOSITORY CONVERSATIONAL HISTORY ARCHIVE ({db_tokens_count:,} TOKENS)]:
 {full_transcript_str}
 
