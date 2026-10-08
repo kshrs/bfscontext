@@ -168,6 +168,12 @@ def index():
     return render_template("index2.html")
 
 
+@app.route("/doc")
+def documentation():
+    """Serves the comprehensive parent documentation page."""
+    return render_template("doc.html")
+
+
 @app.route("/api/chat-history")
 def get_chat_history():
     """Returns the realistic 264-turn (~91k tokens) chat session."""
