@@ -138,26 +138,43 @@ Allowing worker LLMs to enter recursive "self-healing" loops introduces infinite
 
 ---
 
-## 8. Production-Style End-to-End Demonstration
+## 8. Live Demonstration & Failure Injection
 
-CapsuleMCP includes a comprehensive CLI demonstration harness (`demo/run_e2e_demo.py`) that exercises the entire pipeline from MCP gateway to circuit breaker.
+CapsuleMCP includes live terminal demonstrations with Rich dashboards and deterministic failure injection:
 
-### Running the E2E Demo:
+### Running the Live Terminal Dashboard:
 
 ```bash
-# 1. Standard mock run (valid output -> SUCCESS -> applied safely)
+# 1. Primary Live Terminal Dashboard (Linux / macOS / Windows)
+python demo/run_demo.py
+
+# 2. Failure Injection Demo (Simulates worker error -> 1 fix attempt -> Circuit Breaker)
+python demo/run_demo.py --simulate-error
+
+# 3. Direct Failure Injection Runner
+python demo/run_failure_demo.py --simulate-error
+
+# 4. Cross-Platform Scripts
+./demo/run_demo.sh          # Linux / macOS entry point
+.\demo\run_demo.ps1         # Windows PowerShell entry point
+```
+
+### Running the Complete Multi-Module E2E Pipeline:
+
+```bash
+# Standard mock run (valid output -> SUCCESS -> applied safely)
 python demo/run_e2e_demo.py --mode mock --failure valid
 
-# 2. Repairable failure (malformed syntax -> 1 fix attempt -> REPAIRED -> applied)
+# Repairable failure (malformed syntax -> 1 fix attempt -> REPAIRED -> applied)
 python demo/run_e2e_demo.py --mode mock --failure repairable
 
-# 3. Unrecoverable failure (fatal syntax -> 1 fix fails -> CIRCUIT_BREAKER_TRIPPED -> safe rollback)
+# Unrecoverable failure (fatal syntax -> 1 fix fails -> CIRCUIT_BREAKER_TRIPPED -> safe rollback)
 python demo/run_e2e_demo.py --mode mock --failure unrecoverable
 
-# 4. Inspect full Context Capsule sent to worker
+# Inspect full Context Capsule sent to worker
 python demo/run_e2e_demo.py --show-capsule
 
-# 5. Live LLM execution (fails gracefully if CAPSULEMCP_API_KEY is unset)
+# Live LLM execution (fails gracefully if CAPSULEMCP_API_KEY is unset)
 python demo/run_e2e_demo.py --mode real
 ```
 
