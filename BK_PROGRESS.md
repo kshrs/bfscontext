@@ -26,7 +26,7 @@
   - Dynamic `sys.modules` isolation harness mocking `capsule_engine`, `circuit_breaker`, `telemetry`, and `litellm.completion`
   - Cover valid execution, circuit breaker tripping & rollback handling, and auto-fixer delegation
   - Verify test suite runs (Red Stage)
-- **Status:** Pending
+- **Status:** ✅ Completed (Red stage verified: 4 failing tests awaiting module implementation)
 - **Next:** Milestone 3 (Implementation of `capsule_mcp.py`)
 
 ---
