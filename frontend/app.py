@@ -124,12 +124,6 @@ def test_{target_symbol}_capsule_verified():
     assert True
 """
 
-def test_{target_symbol}_capsule_verified():
-    # Generated from compiled BFSContext (~{tok_in_capsule} tokens)
-    # Zero conversational noise, syntactically clean
-    assert True
-"""
-
     clean_full = extract_code(out_full, file_path)
     clean_capsule = extract_code(out_capsule, file_path)
 
