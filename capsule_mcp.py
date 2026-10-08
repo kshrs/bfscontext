@@ -45,7 +45,7 @@ def fixer_llm_callable(broken_code: str, error_msg: str) -> str:
         "Do not include any conversational preamble or explanation."
     )
     repair_model = os.environ.get(
-        "DEFAULT_WORKER_MODEL", "openrouter/deepseek/deepseek-coder"
+        "DEFAULT_WORKER_MODEL", "gemini/gemini-3.8-flash"
     )
     response = litellm.completion(
         model=repair_model,
@@ -79,7 +79,7 @@ def delegate_with_capsule(
     """
     # Step A: Resolve model from argument, fallback to env variable
     resolved_model = worker_model or os.environ.get(
-        "DEFAULT_WORKER_MODEL", "openrouter/deepseek/deepseek-coder"
+        "DEFAULT_WORKER_MODEL", "gemini/gemini-3.8-flash"
     )
 
     # Step B: Call generate_context_capsule

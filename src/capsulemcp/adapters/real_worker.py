@@ -29,8 +29,8 @@ class RealWorkerProvider(WorkerProvider):
         CAPSULEMCP_BASE_URL: Optional endpoint URL (default: 'https://api.openai.com/v1')
     """
 
-    DEFAULT_BASE_URL = "https://api.openai.com/v1"
-    DEFAULT_MODEL = "gpt-4o-mini"
+    DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
+    DEFAULT_MODEL = "gemini-2.0-flash"
 
     def __init__(
         self,
@@ -40,8 +40,8 @@ class RealWorkerProvider(WorkerProvider):
         timeout_seconds: float = 30.0,
         http_client: Optional[Any] = None,
     ) -> None:
-        self.api_key = api_key or os.getenv("CAPSULEMCP_API_KEY")
-        self.model = model or os.getenv("CAPSULEMCP_MODEL", self.DEFAULT_MODEL)
+        self.api_key = api_key or os.getenv("CAPSULEMCP_API_KEY") or os.getenv("GEMINI_API_KEY")
+        self.model = model or os.getenv("CAPSULEMCP_MODEL") or os.getenv("DEFAULT_WORKER_MODEL", self.DEFAULT_MODEL)
         self.base_url = (base_url or os.getenv("CAPSULEMCP_BASE_URL", self.DEFAULT_BASE_URL)).rstrip("/")
         self.timeout_seconds = timeout_seconds
         self._http_client = http_client  # Injectable for unit tests
