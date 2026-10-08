@@ -254,8 +254,9 @@
 
     .bar-fill { height: 100%; background: var(--ink); }
 
-    .hover-input-container {
-      position: absolute;
+    /* Common Fixed Bottom Input in Tab 2 */
+    .fixed-bottom-input-container {
+      position: fixed;
       bottom: 24px;
       left: 50%;
       transform: translateX(-50%);
@@ -272,6 +273,7 @@
       display: flex;
       align-items: center;
       gap: 12px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
     }
 
     .input-box input {
@@ -381,12 +383,8 @@
 
       <div style="display: flex; align-items: center; gap: 16px;">
         <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--mid);">
-          fe40af24
+          Commit: fe40af24
         </span>
-        <button onclick="switchTab('tab-product')" class="btn-action-black">
-          <span>Run Dual Test</span>
-          <i class="fa-solid fa-arrow-right" style="font-size: 11px;"></i>
-        </button>
       </div>
     </div>
   </header>
@@ -510,13 +508,13 @@
     </section>
 
     <!-- ================= VIEW 2: TEST THE PRODUCT (DUAL SPLIT RUNNER) ================= -->
-    <section id="tab-product" class="tab-pane" style="display: none; flex: 1; flex-direction: column; height: calc(100vh - 72px); position: relative;">
+    <section id="tab-product" class="tab-pane" style="display: none; flex: 1; height: calc(100vh - 72px); position: relative; overflow: hidden;">
       
-      <div class="split-container" style="display: grid; grid-template-columns: 1fr 1fr; height: 100%; overflow: hidden; padding-bottom: 100px;">
+      <div class="split-container" style="display: grid; grid-template-columns: 1fr 1fr; height: 100%; width: 100%; overflow: hidden;">
         
         <!-- Left: Full Context -->
-        <div style="border-right: 1px solid var(--rule); background: var(--bg); display: flex; flex-direction: column; overflow: hidden;">
-          <div style="padding: 18px 28px; border-bottom: 1px solid var(--rule); background: var(--bg-darker); display: flex; justify-content: space-between; align-items: center;">
+        <div style="border-right: 1px solid var(--rule); background: var(--bg); display: flex; flex-direction: column; height: 100%; overflow: hidden;">
+          <div style="padding: 18px 28px; border-bottom: 1px solid var(--rule); background: var(--bg-darker); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
             <div>
               <div class="cell-label" style="margin: 0;">BASELINE ARCHITECTURE</div>
               <h3 style="font-size: 20px;">Full Chat History As Context</h3>
@@ -526,7 +524,7 @@
             </span>
           </div>
 
-          <div id="fullOutputScroll" style="flex: 1; overflow-y: auto; padding: 24px;">
+          <div id="fullOutputScroll" style="flex: 1; overflow-y: auto; padding: 24px 24px 110px 24px;">
             <div style="padding: 20px; border: 1px solid var(--rule); background: var(--chalk); margin-bottom: 20px; border-radius: var(--radius-sm);">
               <div style="font-weight: 700; font-size: 13px; margin-bottom: 4px;">High Memory & Attention Overhead</div>
               <p style="font-size: 13px; color: var(--ink-light); margin: 0;">
@@ -538,8 +536,8 @@
         </div>
 
         <!-- Right: BFSContext Capsule -->
-        <div style="background: var(--chalk); display: flex; flex-direction: column; overflow: hidden;">
-          <div style="padding: 18px 28px; border-bottom: 1px solid var(--rule); background: var(--chalk); display: flex; justify-content: space-between; align-items: center;">
+        <div style="background: var(--chalk); display: flex; flex-direction: column; height: 100%; overflow: hidden;">
+          <div style="padding: 18px 28px; border-bottom: 1px solid var(--rule); background: var(--chalk); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
             <div>
               <div class="cell-label" style="margin: 0; color: var(--ink);">OUR SOLUTION</div>
               <h3 style="font-size: 20px;">Direct Hash & Tiered Memory</h3>
@@ -557,7 +555,7 @@
             </div>
           </div>
 
-          <div id="capsuleOutputScroll" style="flex: 1; overflow-y: auto; padding: 24px;">
+          <div id="capsuleOutputScroll" style="flex: 1; overflow-y: auto; padding: 24px 24px 110px 24px;">
             <div style="padding: 20px; border: 1px solid var(--rule); background: var(--bg); margin-bottom: 20px; border-radius: var(--radius-sm);">
               <div style="font-weight: 700; font-size: 13px; margin-bottom: 4px;">O(1) Direct Hash Indexing + L1/L2 SSD Cache</div>
               <p style="font-size: 13px; color: var(--ink-light); margin: 0;">
@@ -570,8 +568,8 @@
 
       </div>
 
-      <!-- Hovering Common Input Bar (Generic for ANY user prompt) -->
-      <div class="hover-input-container">
+      <!-- Fixed Bottom Center Input Bar (Generic for ANY user prompt) -->
+      <div class="fixed-bottom-input-container">
         <form onsubmit="handleExecuteBenchmark(event)" class="input-box">
           <span style="color: var(--mid); font-family: 'JetBrains Mono';">❯</span>
           <input 
