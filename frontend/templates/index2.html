@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>bribed.fyi style — BFSContext Causal Memory Gateway</title>
+  <title>bfscontext.dev — Deterministic Causal Memory Gateway</title>
   
   <!-- Fonts: Playfair Display (Serif), Inter (Sans), JetBrains Mono (Code) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,19 +12,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
   <style>
-    /* =========================================================
-       EXACT DESIGN TOKENS (from bribed.fyi inspiration)
-       Palette:
-       --bg: #fafaf8
-       --ink: #0e0e0e
-       --chalk: #ffffff
-       --mid: #6b6b6b
-       --rule: #d8d8d4
-       --hi: #f5e642  (Electric yellow highlighter)
-       --on-hi: #0e0e0e
-       --bg-darker: #f0efe8
-       --border: #d8d8d4
-       ========================================================= */
     :root {
       --bg: #FAFAF8;
       --chalk: #FFFFFF;
@@ -45,11 +32,7 @@
       --duration: 0.15s;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       background-color: var(--bg);
@@ -64,7 +47,6 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* Headings in Editorial Playfair Display */
     h1, .hero-title {
       font-family: 'Playfair Display', Georgia, serif;
       font-size: 64px;
@@ -85,13 +67,12 @@
 
     h3 {
       font-family: 'Playfair Display', Georgia, serif;
-      font-size: 24px;
+      font-size: 22px;
       font-weight: 700;
-      line-height: 1.35;
+      line-height: 1.3;
       color: var(--ink);
     }
 
-    /* Highlighter highlight box (exact signature from bribed.fyi) */
     .hl {
       background-color: var(--hi);
       color: var(--on-hi);
@@ -100,7 +81,6 @@
       line-height: 1.05;
     }
 
-    /* Top Navigation bar */
     .site-nav {
       background-color: var(--bg);
       border-bottom: 1px solid var(--rule);
@@ -166,9 +146,7 @@
       position: relative;
     }
 
-    .nav-link:hover {
-      color: var(--mid);
-    }
+    .nav-link:hover { color: var(--mid); }
 
     .nav-link.active::after {
       content: '';
@@ -199,9 +177,7 @@
       transition: opacity var(--duration) ease;
     }
 
-    .btn-action-black:hover {
-      opacity: 0.88;
-    }
+    .btn-action-black:hover { opacity: 0.88; }
 
     .btn-action-outline {
       background-color: transparent;
@@ -216,11 +192,31 @@
       transition: border-color var(--duration) ease;
     }
 
-    .btn-action-outline:hover {
-      border-color: var(--ink);
+    .btn-action-outline:hover { border-color: var(--ink); }
+
+    .btn-view-context {
+      background-color: var(--chalk);
+      color: var(--ink);
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 5px 12px;
+      border: 1px solid var(--ink);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all var(--duration) ease;
     }
 
-    /* 3-Column Bento Grid Container (Exact from bribed.fyi bottom cards) */
+    .btn-view-context:hover {
+      background-color: var(--ink);
+      color: var(--chalk);
+    }
+
     .grid-three-col {
       display: grid;
       grid-template-columns: 1.1fr 1fr 1.3fr;
@@ -228,14 +224,8 @@
       border-bottom: 1px solid var(--rule);
     }
 
-    .grid-cell {
-      padding: 32px;
-      border-right: 1px solid var(--rule);
-    }
-
-    .grid-cell:last-child {
-      border-right: none;
-    }
+    .grid-cell { padding: 32px; border-right: 1px solid var(--rule); }
+    .grid-cell:last-child { border-right: none; }
 
     .cell-label {
       font-family: 'Inter', sans-serif;
@@ -244,10 +234,9 @@
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--mid);
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
 
-    /* Department progress bars like bribed.fyi */
     .bar-row {
       display: flex;
       align-items: center;
@@ -261,15 +250,10 @@
       height: 4px;
       background: var(--rule);
       margin: 0 16px;
-      position: relative;
     }
 
-    .bar-fill {
-      height: 100%;
-      background: var(--ink);
-    }
+    .bar-fill { height: 100%; background: var(--ink); }
 
-    /* Common Hovering Input in Tab 2 */
     .hover-input-container {
       position: absolute;
       bottom: 24px;
@@ -313,6 +297,59 @@
       border: 1px solid #222222;
     }
 
+    /* Modal Overlay for Context JSON View */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(14, 14, 14, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .modal-card {
+      background: var(--chalk);
+      border: 1px solid var(--ink);
+      border-radius: var(--radius-md);
+      max-width: 780px;
+      width: 100%;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .modal-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--rule);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-darker);
+    }
+
+    .modal-close-btn {
+      background: none;
+      border: 1px solid var(--rule);
+      border-radius: 4px;
+      width: 28px;
+      height: 28px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: var(--ink);
+    }
+
+    .modal-close-btn:hover { background: var(--elevated); }
+
     @media (max-width: 900px) {
       .grid-three-col { grid-template-columns: 1fr; }
       .grid-cell { border-right: none; border-bottom: 1px solid var(--rule); }
@@ -322,17 +359,14 @@
 </head>
 <body>
 
-  <!-- ================= TOP NAVIGATION (bribed.fyi header layout) ================= -->
+  <!-- ================= TOP NAVIGATION ================= -->
   <header class="site-nav">
     <div class="nav-inner">
-      
-      <!-- Brand Logo -->
       <a href="#" class="logo-area" onclick="switchTab('tab-hero'); return false;">
         <span class="logo-icon">▲</span>
         <span class="logo-text">bfscontext<span class="logo-tld">.dev</span></span>
       </a>
 
-      <!-- 3 Primary Nav Tabs Required by User -->
       <nav class="nav-links">
         <button onclick="switchTab('tab-chat')" id="btn-tab-chat" class="nav-link">
           1. View Chat History & Context
@@ -345,7 +379,6 @@
         </button>
       </nav>
 
-      <!-- Right CTAs -->
       <div style="display: flex; align-items: center; gap: 16px;">
         <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--mid);">
           fe40af24
@@ -355,35 +388,29 @@
           <i class="fa-solid fa-arrow-right" style="font-size: 11px;"></i>
         </button>
       </div>
-
     </div>
   </header>
 
-  <!-- ================= MAIN CONTENT ================= -->
+  <!-- ================= MAIN VIEWPORTS ================= -->
   <main style="flex: 1; display: flex; flex-direction: column;">
 
-    <!-- ================= VIEW 0: BRIBED.FYI STYLE HERO LANDING ================= -->
+    <!-- ================= VIEW 0: BRIBED.FYI HERO LANDING ================= -->
     <section id="tab-hero" class="tab-pane" style="max-width: 1500px; width: 100%; margin: 0 auto; padding: 56px 32px 0 32px;">
-      
-      <!-- Live Pill -->
       <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--mid); margin-bottom: 24px; display: flex; align-items: center; gap: 8px;">
         <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--ink);"></span>
         <span>LIVE • 264 TURNS • 91,110 TOKENS IN REPOSITORY ARCHIVE</span>
       </div>
 
-      <!-- Playfair Display Big Three-Line Hero Title with Highlighters -->
       <h1 class="hero-title" style="margin-bottom: 32px;">
         Which <span class="hl">function</span>.<br>
         How <span class="hl">much</span>.<br>
         What <span class="hl">happened</span>.
       </h1>
 
-      <!-- Subtitle description -->
       <p style="font-size: 18px; line-height: 1.6; color: var(--ink-light); max-width: 680px; margin-bottom: 36px;">
         An open, deterministic record of the context multi-agent swarms are asked to pay — slashed by 95% via Direct Hash Indexing and L1/L2/L3 SSD storage.
       </p>
 
-      <!-- Action Buttons -->
       <div style="display: flex; gap: 14px; margin-bottom: 60px;">
         <button onclick="switchTab('tab-product')" class="btn-action-black">
           <span>Test the Product →</span>
@@ -393,27 +420,23 @@
         </button>
       </div>
 
-      <!-- 3-Column Bento Metric Section (Exact Layout of bribed.fyi bottom section) -->
       <div class="grid-three-col">
-        
-        <!-- Column 1: Latest Slashed Task -->
         <div class="grid-cell">
           <div class="cell-label">LATEST TASK CONTEXT SLICE</div>
           <div style="font-family: 'Playfair Display', serif; font-size: 52px; font-weight: 800; line-height: 1.1; margin-bottom: 12px;">
             <span class="hl">90,685</span> <span style="font-size: 26px; font-family: 'Inter'; font-weight: 400; color: var(--mid);">tokens saved</span>
           </div>
           <div style="font-size: 14px; color: var(--ink); font-weight: 600;">
-            MetricHUDCanvas • vitest_double_buffer.ts
+            Deterministic AST Slicing & Direct Hash
           </div>
           <div style="font-size: 12px; color: var(--mid); font-family: 'JetBrains Mono'; margin-top: 4px;">
-            09 Oct • Commit fe40af24
+            Active Commit fe40af24
           </div>
           <p style="font-size: 14px; font-style: italic; color: var(--ink-light); margin-top: 16px;">
-            "Circular buffer pointer wrapping & 500k telemetry write bounds verified with 0 syntax errors"
+            "Replaces polynomial DAG walks with amortized O(1) hash lookups on SSD"
           </p>
         </div>
 
-        <!-- Column 2: Total Metrics -->
         <div class="grid-cell">
           <div class="cell-label">TOTAL HISTORICAL CONTEXT</div>
           <div style="font-family: 'Playfair Display', serif; font-size: 64px; font-weight: 800; line-height: 1; margin-bottom: 8px;">
@@ -433,7 +456,6 @@
           </div>
         </div>
 
-        <!-- Column 3: Component / Department Breakdown -->
         <div class="grid-cell">
           <div class="cell-label">MEMORY TIER ALLOCATION</div>
           
@@ -461,9 +483,7 @@
             <span style="font-family: 'JetBrains Mono'; color: var(--mid);">&lt; 500 tok</span>
           </div>
         </div>
-
       </div>
-
     </section>
 
     <!-- ================= VIEW 1: VIEW CHAT HISTORY & CONTEXT ================= -->
@@ -510,7 +530,7 @@
             <div style="padding: 20px; border: 1px solid var(--rule); background: var(--chalk); margin-bottom: 20px; border-radius: var(--radius-sm);">
               <div style="font-weight: 700; font-size: 13px; margin-bottom: 4px;">High Memory & Attention Overhead</div>
               <p style="font-size: 13px; color: var(--ink-light); margin: 0;">
-                Passing 91,110 tokens triggers O(N²) quadratic self-attention FLOP prefill on GPU clusters and blows past token limits.
+                Dumps all 91,110 conversational tokens into prompt prefill. Forces GPU to allocate quadratic attention KV-Cache and slows execution.
               </p>
             </div>
             <div id="fullExecutionOutput" style="display: none;"></div>
@@ -524,16 +544,24 @@
               <div class="cell-label" style="margin: 0; color: var(--ink);">OUR SOLUTION</div>
               <h3 style="font-size: 20px;">Direct Hash & Tiered Memory</h3>
             </div>
-            <span style="font-family: 'JetBrains Mono'; font-size: 12px; font-weight: 700; padding: 4px 8px; background: var(--hi); color: var(--on-hi);">
-              ~420 tokens
-            </span>
+            
+            <!-- Context Inspection Button -->
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button onclick="openContextModal()" class="btn-view-context" title="View compiled context capsule JSON payload">
+                <i class="fa-solid fa-code"></i>
+                <span>View Context (JSON)</span>
+              </button>
+              <span style="font-family: 'JetBrains Mono'; font-size: 12px; font-weight: 700; padding: 4px 8px; background: var(--hi); color: var(--on-hi);">
+                ~420 tokens
+              </span>
+            </div>
           </div>
 
           <div id="capsuleOutputScroll" style="flex: 1; overflow-y: auto; padding: 24px;">
             <div style="padding: 20px; border: 1px solid var(--rule); background: var(--bg); margin-bottom: 20px; border-radius: var(--radius-sm);">
               <div style="font-weight: 700; font-size: 13px; margin-bottom: 4px;">O(1) Direct Hash Indexing + L1/L2 SSD Cache</div>
               <p style="font-size: 13px; color: var(--ink-light); margin: 0;">
-                Resolves target symbol in <span style="font-family: 'JetBrains Mono'; font-weight: 700;">0.066 ms</span> on SSD and outputs complete, 100% syntactically intact test suites.
+                Extracts precise target contract in O(1) amortized time (0.066ms on SSD) without polynomial graph traversals.
               </p>
             </div>
             <div id="capsuleExecutionOutput" style="display: none;"></div>
@@ -542,15 +570,15 @@
 
       </div>
 
-      <!-- Hovering Input Bar -->
+      <!-- Hovering Common Input Bar (Generic for ANY user prompt) -->
       <div class="hover-input-container">
         <form onsubmit="handleExecuteBenchmark(event)" class="input-box">
           <span style="color: var(--mid); font-family: 'JetBrains Mono';">❯</span>
           <input 
             type="text" 
             id="commonPromptInput"
-            value="Write unit tests for MetricHUDCanvas double-buffering pointer wrapping and boundary arithmetic"
-            placeholder="Type your development or testing task here..."
+            value="Write a high-performance circular buffer test suite for streaming telemetry"
+            placeholder="Type any development or testing task here (e.g. Write unit tests for auth middleware)..."
           />
           <button type="submit" id="btnRunBenchmark" class="btn-action-black" style="padding: 9px 18px;">
             <span>Run Dual Execution</span>
@@ -568,13 +596,11 @@
         <div class="cell-label">EMPIRICAL COMPARISON & BENCHMARK</div>
         <h2>Memory & Compute Co-Reduction Card</h2>
         <p style="font-size: 15px; color: var(--ink-light); margin-top: 6px;">
-          Empirical measurements from the last dual run demonstrating identical or superior output quality with over 90k tokens eliminated.
+          Measurements from the last run demonstrating identical output quality with over 90k tokens eliminated.
         </p>
       </div>
 
-      <!-- Grid Cells -->
       <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 36px;">
-        
         <div style="border: 1px solid var(--rule); background: var(--chalk); padding: 24px;">
           <div class="cell-label" style="margin-bottom: 8px;">TOKENS SLASHED</div>
           <div style="font-family: 'Playfair Display'; font-size: 42px; font-weight: 800; line-height: 1.1;" id="metricTokensSaved">90,685</div>
@@ -598,108 +624,49 @@
           <div style="font-family: 'Playfair Display'; font-size: 42px; font-weight: 800; line-height: 1.1;" id="metricSpeedup">4.2x</div>
           <div style="font-size: 12px; font-family: 'JetBrains Mono'; color: var(--mid); margin-top: 6px;" id="metricLatencyText">1.83s vs 7.68s</div>
         </div>
-
       </div>
-
-      <!-- Full Program Comparison View -->
-      <div style="border: 1px solid var(--rule); background: var(--chalk); padding: 32px; margin-bottom: 36px;">
-        <h3 style="margin-bottom: 8px;">Output Quality & Completeness Audit</h3>
-        <p style="font-size: 14px; color: var(--mid); margin-bottom: 24px;">
-          Both engines generated complete, executable TypeScript Vitest suites. BFSContext achieved equal or higher depth with 0 missing imports and zero conversational noise.
-        </p>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-          <div>
-            <div class="cell-label">TRADITIONAL OUTPUT (FULL HISTORY PREFILL)</div>
-            <pre class="code-container" style="max-height: 380px;">import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { MetricHUDCanvas } from './MetricHUDCanvas';
-
-describe('MetricHUDCanvas Baseline Tests', () => {
-  let mockCanvas: HTMLCanvasElement;
-  let mockContext: CanvasRenderingContext2D;
-
-  beforeEach(() => {
-    mockContext = {
-      fillRect: vi.fn(),
-      beginPath: vi.fn(),
-      moveTo: vi.fn(),
-      lineTo: vi.fn(),
-      stroke: vi.fn(),
-    } as unknown as CanvasRenderingContext2D;
-
-    mockCanvas = {
-      width: 300,
-      height: 100,
-      getContext: vi.fn().mockReturnValue(mockContext),
-    } as unknown as HTMLCanvasElement;
-  });
-
-  it('wraps pointer at buffer capacity under continuous write loop', () => {
-    const hud = new MetricHUDCanvas(mockCanvas, 100);
-    for (let i = 0; i < 500000; i++) {
-      hud.recordValue(i % 50);
-    }
-    expect(hud['ptr']).toBe(0);
-  });
-});</pre>
-          </div>
-
-          <div>
-            <div class="cell-label" style="color: var(--ink);">BFSContext OUTPUT (COMPILED CAPSULE)</div>
-            <pre class="code-container" style="max-height: 380px;">import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { MetricHUDCanvas } from './MetricHUDCanvas';
-
-describe('MetricHUDCanvas — High-Throughput Circular Buffer & Blitting Tests', () => {
-  let mockCanvas: HTMLCanvasElement;
-  let mockContext: CanvasRenderingContext2D;
-
-  beforeEach(() => {
-    mockContext = {
-      fillRect: vi.fn(),
-      beginPath: vi.fn(),
-      moveTo: vi.fn(),
-      lineTo: vi.fn(),
-      stroke: vi.fn(),
-      fillStyle: '',
-      strokeStyle: '',
-      lineWidth: 0,
-    } as unknown as CanvasRenderingContext2D;
-
-    mockCanvas = {
-      width: 320,
-      height: 80,
-      getContext: vi.fn().mockReturnValue(mockContext),
-    } as unknown as HTMLCanvasElement;
-  });
-
-  it('correctly wraps circular ring buffer pointers under 500,000 burst writes', () => {
-    const capacity = 100;
-    const hud = new MetricHUDCanvas(mockCanvas, capacity);
-    for (let i = 0; i < 500000; i++) {
-      hud.recordValue(i % 50);
-    }
-    expect(hud['ptr']).toBe(0);
-    expect(hud['history'].length).toBe(capacity);
-  });
-
-  it('maintains boundary arithmetic invariants when values exceed maximum bounds', () => {
-    const hud = new MetricHUDCanvas(mockCanvas, 50);
-    hud.recordValue(-10.5);
-    hud.recordValue(99999.0);
-    expect(() => hud.render()).not.toThrow();
-    expect(mockContext.stroke).toHaveBeenCalledTimes(1);
-  });
-});</pre>
-          </div>
-        </div>
-      </div>
-
     </section>
 
   </main>
 
+  <!-- ================= CONTEXT JSON HOVER MODAL ================= -->
+  <div id="contextModal" class="modal-overlay" onclick="closeContextModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <span class="cell-label" style="margin: 0; color: var(--ink);">CONTEXT INSPECTION PAYLOAD</span>
+          <div style="font-family: 'Playfair Display'; font-size: 18px; font-weight: 700;">Compiled Capsule Metadata (JSON)</div>
+        </div>
+        <button onclick="closeContextModal()" class="modal-close-btn" title="Close">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div style="padding: 20px; overflow-y: auto; flex: 1; background: var(--bg);">
+        <pre id="modalJsonContent" class="code-container" style="background: #111; color: #4ade80; max-height: 55vh;"></pre>
+      </div>
+    </div>
+  </div>
+
   <!-- ================= JAVASCRIPT APP CONTROLLER ================= -->
   <script>
+    let activeContextJson = {
+      "engine": "BFSContext CapsuleMCP",
+      "commit_sha": "fe40af24d7d5db1f4ade7b7d05532396b04671ec",
+      "pinned_state": "ACTIVE_HEAD",
+      "storage_tier": "L2_SSD",
+      "ssd_lookup_latency_ms": 0.066,
+      "token_metrics": {
+        "baseline_full_history_tokens": 91110,
+        "compiled_capsule_tokens": 425,
+        "tokens_saved": 90685,
+        "reduction_percent": 99.53
+      },
+      "intent_ledger": {
+        "macro_intent": "Zero-bloat causal memory handoff",
+        "active_query": "Write unit tests for telemetry stream buffer"
+      }
+    };
+
     function switchTab(tabId) {
       document.querySelectorAll('.tab-pane').forEach(el => el.style.display = 'none');
       document.querySelectorAll('.nav-link').forEach(btn => btn.classList.remove('active'));
@@ -767,6 +734,19 @@ describe('MetricHUDCanvas — High-Throughput Circular Buffer & Blitting Tests',
       return d.innerHTML;
     }
 
+    // Modal Context Viewer Controls
+    function openContextModal() {
+      const modal = document.getElementById('contextModal');
+      const jsonPre = document.getElementById('modalJsonContent');
+      jsonPre.textContent = JSON.stringify(activeContextJson, null, 2);
+      modal.style.display = 'flex';
+    }
+
+    function closeContextModal() {
+      document.getElementById('contextModal').style.display = 'none';
+    }
+
+    // Dynamic execution for ANY prompt
     async function handleExecuteBenchmark(e) {
       e.preventDefault();
       const input = document.getElementById('commonPromptInput');
@@ -783,7 +763,7 @@ describe('MetricHUDCanvas — High-Throughput Circular Buffer & Blitting Tests',
       capOut.style.display = 'block';
 
       fullOut.innerHTML = `<div style="padding: 16px; border: 1px solid var(--rule); background: var(--bg-darker); font-family: 'JetBrains Mono'; font-size: 12px; color: var(--mid);">Prefilling 91,110 tokens of conversational context into LLM...</div>`;
-      capOut.innerHTML = `<div style="padding: 16px; border: 1px solid var(--rule); background: var(--bg-darker); font-family: 'JetBrains Mono'; font-size: 12px; color: var(--ink);">Resolving MetricHUDCanvas via Direct Hash Index in O(1)...</div>`;
+      capOut.innerHTML = `<div style="padding: 16px; border: 1px solid var(--rule); background: var(--bg-darker); font-family: 'JetBrains Mono'; font-size: 12px; color: var(--ink);">Extracting symbol & compiling capsule in O(1)...</div>`;
 
       try {
         const res = await fetch('/api/run-dual-benchmark', {
@@ -794,6 +774,7 @@ describe('MetricHUDCanvas — High-Throughput Circular Buffer & Blitting Tests',
         const data = await res.json();
 
         if (data.status === 'success') {
+          if (data.context_json) activeContextJson = data.context_json;
           renderDualOutputs(data);
           updateAuditMetrics(data);
         } else {
