@@ -1,3 +1,6 @@
+from capsule_engine import estimate_tokens
+
+
 def test_token_estimator():
     """Test that estimate_tokens returns an integer greater than zero."""
     # Assuming estimate_tokens is a function imported from a module
