@@ -1,2 +1,7 @@
-tiktoken>=0.7.0
+fastmcp
+mcp
+litellm
+pytest
+python-dotenv
 rich>=13.0
+tiktoken>=0.7.0
