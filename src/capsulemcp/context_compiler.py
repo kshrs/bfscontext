@@ -9,7 +9,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from capsulemcp.adapters.interfaces import IntentProvider, TelemetrySink
+from capsulemcp.adapters.interfaces import CodeAnalyzer, IntentProvider, TelemetrySink
 from capsulemcp.adapters.mock.mock_intent import MockIntentProvider
 from capsulemcp.adapters.mock.mock_telemetry import MockTelemetrySink
 from capsulemcp.ast_extractor import ASTExtractor
@@ -33,12 +33,15 @@ class ContextCompiler:
         intent_provider: Optional[IntentProvider] = None,
         telemetry_sink: Optional[TelemetrySink] = None,
         token_counter: Optional[TokenCounter] = None,
+        code_analyzer: Optional[CodeAnalyzer] = None,
     ) -> None:
         self.repo_path = Path(repo_path).resolve()
         self.intent_provider = intent_provider or MockIntentProvider()
         self.telemetry_sink = telemetry_sink or MockTelemetrySink()
         self.token_counter = token_counter or TokenCounter()
-        self.ast_extractor = ASTExtractor(repo_path=str(self.repo_path))
+        self.code_analyzer = code_analyzer or ASTExtractor(repo_path=str(self.repo_path))
+        # Keep ast_extractor attribute for backwards compatibility
+        self.ast_extractor = self.code_analyzer
 
     def _collect_raw_repository_context(self, target_file_path: Path) -> str:
         """
@@ -105,14 +108,18 @@ class ContextCompiler:
         # Controlled 1-hop dependency expansion
         # Find local AST node for target unit
         target_node = None
-        for node in tree.body:
-            if getattr(node, "name", None) == target_unit.name:
-                target_node = node
-                break
+        tree_body = getattr(tree, "body", None)
+        if isinstance(tree_body, list):
+            for node in tree_body:
+                if getattr(node, "name", None) == target_unit.name:
+                    target_node = node
+                    break
+        else:
+            target_node = tree
 
         dependencies = []
-        if target_node:
-            dependencies = self.ast_extractor.extract_local_dependencies(target_path, target_node, tree)
+        if target_node is not None:
+            dependencies = self.code_analyzer.extract_local_dependencies(target_path, target_node, tree)
 
         # Git HEAD SHA
         git_head_sha = get_git_head_sha(str(active_repo))

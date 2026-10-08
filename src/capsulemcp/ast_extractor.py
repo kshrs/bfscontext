@@ -9,6 +9,7 @@ import logging
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
+from capsulemcp.adapters.interfaces import CodeAnalyzer
 from capsulemcp.models import CodeUnit, DependencyUnit
 
 logger = logging.getLogger(__name__)
@@ -29,8 +30,8 @@ class UnitNotFoundError(Exception):
     pass
 
 
-class ASTExtractor:
-    """Extracts syntactic units, imports, and 1-hop dependencies deterministically."""
+class ASTExtractor(CodeAnalyzer):
+    """Extracts syntactic units, imports, and 1-hop dependencies deterministically using Python AST."""
 
     SUPPORTED_EXTENSIONS = {".py"}
 
@@ -255,3 +256,7 @@ class ASTExtractor:
                         logger.debug("Could not resolve local dependency %s: %s", found_path, e)
 
         return dependencies
+
+
+# Alias for explicit clarity
+PythonASTAnalyzer = ASTExtractor

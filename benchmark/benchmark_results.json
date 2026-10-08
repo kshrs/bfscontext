@@ -1,0 +1,43 @@
+{
+  "benchmark_metadata": {
+    "target_unit": "execute_user_charge",
+    "target_file": "src/billing_engine.py",
+    "tokenizer": "tiktoken:cl100k_base",
+    "expected_dependencies": [
+      "class User",
+      "class BillingException",
+      "class GatewayResponse",
+      "class StripeGateway"
+    ],
+    "irrelevant_symbols": [
+      "def calculate_prorated_tax",
+      "class MetricsCollector",
+      "class EmailDispatcher",
+      "class S3Client",
+      "def refund_transaction",
+      "class InvoiceGenerator",
+      "def is_admin_user"
+    ]
+  },
+  "full_context": {
+    "tokens": 1036,
+    "reduction_percent": 0.0,
+    "latency_ms": 99.12,
+    "dependency_recall": 1.0,
+    "irrelevant_code_ratio": 1.0
+  },
+  "vector_retrieval_simulation": {
+    "tokens": 352,
+    "reduction_percent": 66.02,
+    "latency_ms": 3.22,
+    "dependency_recall": 0.25,
+    "irrelevant_code_ratio": 0.29
+  },
+  "capsule_compiler": {
+    "tokens": 546,
+    "reduction_percent": 47.3,
+    "latency_ms": 53.59,
+    "dependency_recall": 1.0,
+    "irrelevant_code_ratio": 0.0
+  }
+}

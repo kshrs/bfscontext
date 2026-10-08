@@ -1,13 +1,52 @@
 """
-Abstract interfaces for pluggable team-owned components.
+Abstract interfaces for pluggable team-owned components and code analyzers.
 """
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
-from capsulemcp.models import ContextCapsule, IntentContext, TokenMetrics
+from capsulemcp.models import CodeUnit, ContextCapsule, DependencyUnit, IntentContext, TokenMetrics
+
+
+class CodeAnalyzer(ABC):
+    """
+    Interface for Track A syntax and structure extraction.
+    Allows swappable implementations (e.g. Python AST, Tree-sitter, language servers).
+    """
+
+    @abstractmethod
+    def parse_file(self, file_path: str | Path) -> Tuple[Any, str]:
+        """Read and parse a source file into a parse tree/AST and raw code string."""
+        pass
+
+    @abstractmethod
+    def extract_imports(self, tree: Any, source: str) -> List[str]:
+        """Extract all import statements preserving source contracts."""
+        pass
+
+    @abstractmethod
+    def find_target_unit(
+        self,
+        tree: Any,
+        source: str,
+        target_name: Optional[str] = None,
+        subtask_description: str = "",
+    ) -> CodeUnit:
+        """Locate complete syntactic unit (function or class) in parsed tree."""
+        pass
+
+    @abstractmethod
+    def extract_local_dependencies(
+        self,
+        target_file_path: str | Path,
+        target_unit_node: Any,
+        tree: Any,
+    ) -> List[DependencyUnit]:
+        """Controlled 1-hop local dependency expansion."""
+        pass
 
 
 class IntentProvider(ABC):
