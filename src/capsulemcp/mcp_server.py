@@ -31,11 +31,12 @@ import time
 from typing import Any, Dict, List, Optional
 import uuid
 
-from capsulemcp.adapters.interfaces import CodeAnalyzer, IntentProvider, TelemetrySink, WorkerProvider
+from capsulemcp.adapters.interfaces import CodeAnalyzer, FixerProvider, IntentProvider, TelemetrySink, WorkerProvider
 from capsulemcp.adapters.mock.mock_intent import MockIntentProvider
 from capsulemcp.adapters.mock.mock_telemetry import MockTelemetrySink
 from capsulemcp.adapters.mock.mock_worker import MockWorkerProvider
 from capsulemcp.ast_extractor import ASTExtractor, UnitNotFoundError, UnsupportedLanguageError
+from capsulemcp.circuit_breaker import CircuitBreaker, GuardrailResult, GuardrailStatus
 from capsulemcp.context_compiler import ContextCompiler
 from capsulemcp.models import ContextCapsule
 
@@ -52,6 +53,7 @@ class DelegationRequest:
     target_symbol: Optional[str] = None
     max_dependency_depth: int = 1
     repo_path: str = "."
+    apply_to_disk: bool = False
     request_id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 
@@ -68,6 +70,7 @@ class DelegationResponse:
     token_metrics: Dict[str, Any]
     dependencies: List[Dict[str, Any]]
     worker_result: Dict[str, Any]
+    guardrail: Dict[str, Any]
     error: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
@@ -82,6 +85,7 @@ class DelegationResponse:
             "token_metrics": self.token_metrics,
             "dependencies": self.dependencies,
             "worker_result": self.worker_result,
+            "guardrail": self.guardrail,
             "error": self.error,
         }
 
@@ -90,7 +94,7 @@ class CapsuleMCPServer:
     """
     Thin Model Context Protocol (MCP) Server for CapsuleMCP.
     Provides tool registration, request validation, context compilation orchestration,
-    and worker dispatch without reimplementing core compilation logic.
+    worker dispatch, and one-strike circuit breaker enforcement.
     """
 
     TOOL_NAME = "delegate_with_capsule"
@@ -102,12 +106,14 @@ class CapsuleMCPServer:
         telemetry_sink: Optional[TelemetrySink] = None,
         worker_provider: Optional[WorkerProvider] = None,
         code_analyzer: Optional[CodeAnalyzer] = None,
+        fixer: Optional[FixerProvider] = None,
     ) -> None:
         self.repo_path = Path(repo_path).resolve()
         self.intent_provider = intent_provider or MockIntentProvider()
         self.telemetry_sink = telemetry_sink or MockTelemetrySink()
         self.worker_provider = worker_provider or MockWorkerProvider()
         self.code_analyzer = code_analyzer or ASTExtractor(repo_path=str(self.repo_path))
+        self.guardrail = CircuitBreaker(repo_path=str(self.repo_path), fixer=fixer)
 
         self.compiler = ContextCompiler(
             repo_path=str(self.repo_path),
@@ -257,6 +263,16 @@ class CapsuleMCPServer:
             worker_res["worker_latency_ms"] = round(worker_lat_ms, 2)
             worker_res["request_id"] = request_id
 
+            # Pass worker output through One-Strike Guardrail / Circuit Breaker
+            generated_code = worker_res.get("generated_code", "")
+            guardrail_res = self.guardrail.evaluate_and_guard(
+                worker_code=generated_code,
+                target_file=req.target_file,
+                target_symbol=req.target_symbol,
+                commit_sha=capsule.git_head_sha,
+                apply_to_disk=req.apply_to_disk,
+            )
+
             dep_info = [
                 {
                     "name": d.name,
@@ -269,8 +285,11 @@ class CapsuleMCPServer:
 
             metrics_dict = capsule.token_metrics.to_dict() if capsule.token_metrics else {}
 
+            # Overall status reflects guardrail outcome
+            overall_status = "success" if guardrail_res.status in (GuardrailStatus.SUCCESS, GuardrailStatus.REPAIRED) else "failed"
+
             resp = DelegationResponse(
-                status="success",
+                status=overall_status,
                 request_id=request_id,
                 target_file=capsule.target_file_path,
                 target_symbol=capsule.target_unit.name,
@@ -280,6 +299,7 @@ class CapsuleMCPServer:
                 token_metrics=metrics_dict,
                 dependencies=dep_info,
                 worker_result=worker_res,
+                guardrail=guardrail_res.to_dict(),
             )
             return resp.to_dict()
 

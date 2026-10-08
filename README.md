@@ -169,6 +169,51 @@ AGY / Orchestrator Agent
 
 ---
 
+## One-Strike Guardrail & Circuit Breaker
+
+Autonomous multi-agent execution requires strict safety boundaries. Allowing worker LLMs to enter recursive "self-healing" loops introduces nondeterministic token drain, latency spikes, and silent hallucinated repository degradation.
+
+CapsuleMCP enforces a **One-Strike Circuit Breaker**:
+- **Markdown fence normalization**: Safely extracts valid python code from ````python ... ```` blocks.
+- **Static syntax compilation check**: Uses `compile(code, filename, "exec")` statically. **Generated code is NEVER executed, eval'd, or imported**.
+- **Structural verification**: Ensures the target symbol still exists in the output.
+- **Strict single repair attempt**: If syntax check fails, calls an injected `FixerProvider` **EXACTLY ONCE**. No while-loops, no retries.
+- **Circuit Breaker Tripping & Scoped Rollback**: If code remains invalid after one fix, trips the circuit breaker and safely rolls back the target file via Git HEAD without touching unrelated working tree files.
+
+### Circuit Breaker Decision Flow
+
+```
+           Worker Output
+                 ↓
+      Markdown Fence Sanitizer
+                 ↓
+      Static Syntax Validation
+                 ↓
+           ┌───────────┐
+           │  Valid?   │
+           └─────┬─────┘
+             yes │ no
+                 │
+              SUCCESS
+                 │
+                 no
+                 ↓
+            ONE FIX ATTEMPT
+                 ↓
+          Static Validation
+                 │
+            ┌────┴────┐
+            yes       no
+             ↓         ↓
+          REPAIRED   CIRCUIT_BREAKER_TRIPPED
+                           ↓
+                      SAFE ROLLBACK
+                           ↓
+                         FAIL
+```
+
+---
+
 ## Installation
 
 ```bash
@@ -184,7 +229,7 @@ pip install -r requirements-dev.txt
 
 ## Running Tests
 
-Execute the comprehensive 41-test test suite:
+Execute the comprehensive 50-test test suite:
 
 ```bash
 pytest -v
@@ -204,8 +249,14 @@ python demo/run_demo.py
 python demo/run_mcp_demo.py
 ```
 
-3. Run the automated multi-target benchmark:
+3. Run the One-Strike Guardrail failure injection demo:
+```bash
+python demo/run_failure_demo.py
+```
+
+4. Run the automated multi-target benchmark:
 ```bash
 python benchmark/run_benchmark.py
 ```
+
 

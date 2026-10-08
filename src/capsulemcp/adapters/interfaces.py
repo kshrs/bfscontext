@@ -89,3 +89,13 @@ class TelemetrySink(ABC):
     ) -> None:
         """Record compilation event, token reduction, and runtime metadata."""
         pass
+
+
+class FixerProvider(ABC):
+    """Interface for one-strike code repair when syntax validation fails."""
+
+    @abstractmethod
+    def fix(self, code: str, error_message: str, target_file_path: str) -> str:
+        """Single repair attempt to fix syntax errors. Must not loop."""
+        pass
+
