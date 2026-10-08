@@ -108,8 +108,8 @@ def compute_runs_average(runs: List[Dict[str, Any]]) -> Dict[str, Any]:
     }
 
 
-def call_gemini_api(prompt: str, max_tokens: int = 1000) -> Tuple[str, float, int]:
-    """Calls Google Gemini API using active models (gemini-3.5-flash -> gemini-3.5-flash-lite -> gemini-flash-lite-latest)."""
+def call_gemini_api(prompt: str, max_tokens: int = 2500) -> Tuple[str, float, int]:
+    """Calls Google Gemini API prioritizing lightweight, low-token flash-lite models (gemini-3.5-flash-lite -> gemini-flash-lite-latest -> gemini-3.1-flash-lite)."""
     api_key = os.environ.get("GEMINI_API_KEY")
 
     if not api_key:
@@ -119,12 +119,12 @@ def call_gemini_api(prompt: str, max_tokens: int = 1000) -> Tuple[str, float, in
             estimate_tokens(prompt)
         )
 
-    # Active available models with valid quota
+    # Prioritize flash-lite models for high token efficiency, low latency and no truncation
     models_to_try = [
-        "gemini-3.5-flash",
         "gemini-3.5-flash-lite",
         "gemini-flash-lite-latest",
-        "gemini-3.8-flash"
+        "gemini-3.1-flash-lite",
+        "gemini-3.5-flash"
     ]
     payload = json.dumps({
         "contents": [{"parts": [{"text": prompt}]}],
@@ -400,8 +400,8 @@ Answer the task immediately and directly. Do NOT explain who you are or introduc
         }
     }
 
-    # 5. Execute Real Gemini Call for Right Side (Capsule)
-    capsule_text, capsule_lat, reported_tokens = call_gemini_api(capsule_prompt, max_tokens=1000)
+    # 5. Execute Real Gemini Call for Right Side (Capsule) with ample generation ceiling
+    capsule_text, capsule_lat, reported_tokens = call_gemini_api(capsule_prompt, max_tokens=2500)
 
     # 6. Execute Real Gemini Call for Left Side (Full Context Representation)
     full_llm_prompt = f"""You are analyzing the full history of the NeuralMesh Viz engineering session (264 turns, {full_tokens_count:,} tokens discussing WebGL rendering, Octree pools, Canvas HUD, and memory leaks).
@@ -411,7 +411,7 @@ Answer this developer request directly and thoroughly:
 
 INSTRUCTIONS:
 Answer the query directly and completely. Do not include boilerplate preamble."""
-    raw_full_text, raw_full_lat, _ = call_gemini_api(full_llm_prompt, max_tokens=1000)
+    raw_full_text, raw_full_lat, _ = call_gemini_api(full_llm_prompt, max_tokens=2500)
 
     full_text = f"""// [FULL CONTEXT INGESTION: {full_tokens_count:,} TOKENS PREFILLED]
 // Simulated prefill latency overhead: 12-18s on large GPU clusters
