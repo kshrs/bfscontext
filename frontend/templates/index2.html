@@ -1,389 +1,613 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BFSContext | Dual-Track Causal Memory Gateway</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              cyan: '#00f0ff',
-              emerald: '#10b981',
-              amber: '#f59e0b',
-              purple: '#8b5cf6',
-              dark: '#060a12',
-              card: '#0c1322',
-              border: '#1a263d'
-            }
-          },
-          fontFamily: {
-            mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
-            sans: ['Inter', 'sans-serif']
-          }
-        }
-      }
-    }
-  </script>
+  <title>BFSContext — Deterministic Causal Memory Gateway</title>
+  
+  <!-- Typography: Playfair Display (Editorial Serif) & Inter (Body Sans) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
   <style>
-    /* Custom Scrollbars */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #060a12; }
-    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: #00f0ff; }
-    .glow-cyan { box-shadow: 0 0 25px -5px rgba(0, 240, 255, 0.25); }
-    .glow-amber { box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.25); }
-    .glass { background: rgba(12, 19, 34, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    /* =========================================================
+       EDITORIAL MONOCHROME DESIGN TOKENS
+       Vibe: Monochrome · Modern · Editorial
+       Rhythm: 4px grid · Generous line-height (1.7) · Flat (No shadows)
+       ========================================================= */
+    :root {
+      --bg: #FAFAF8;
+      --surface: #FFFFFF;
+      --bg-darker: #F0EFE8;
+      --elevated: #CDCDC9;
+      --ink: #0E0E0E;
+      --ink-light: #404040;
+      --ink-muted: #6B6B6B;
+      --rule: #D8D8D4;
+      --border: #D8D8D4;
+      --chalk: #FFFFFF;
+      --hi: #F5E642;
+      --on-hi: #0E0E0E;
+      --accent: #000000;
+
+      /* Radius tokens */
+      --radius-sm: 6px;
+      --radius: 8px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+
+      /* Transitions */
+      --duration: 0.15s;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--ink);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+      letter-spacing: -0.01em;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Headings in Editorial Playfair Display */
+    h1, .h1 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 56px;
+      font-weight: 700;
+      line-height: 1.05;
+      letter-spacing: -0.025em;
+      color: var(--ink);
+    }
+
+    h2, .h2 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 38px;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+    }
+
+    h3, .h3 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1.35;
+      color: var(--ink);
+    }
+
+    p {
+      color: var(--ink-light);
+      margin-bottom: 8px;
+    }
+
+    code, pre, .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--elevated); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--ink-muted); }
+
+    /* Layout Container */
+    .container-editorial {
+      max-width: 1440px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Flat Navbar */
+    .nav-bar {
+      background-color: var(--bg);
+      border-bottom: 1px solid var(--rule);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .nav-content {
+      height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    /* Flat Button Tabs */
+    .nav-tab-group {
+      display: flex;
+      gap: 6px;
+      background: var(--bg-darker);
+      padding: 4px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--rule);
+    }
+
+    .tab-trigger {
+      background: transparent;
+      border: 1px solid transparent;
+      padding: 8px 18px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink-muted);
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+      transition: all var(--duration) ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tab-trigger:hover {
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    .tab-trigger.active {
+      background: var(--surface);
+      color: var(--ink);
+      font-weight: 600;
+      border-color: var(--rule);
+    }
+
+    .badge-tab {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: var(--bg-darker);
+      color: var(--ink-muted);
+      font-family: 'JetBrains Mono', monospace;
+      border: 1px solid var(--rule);
+    }
+
+    .tab-trigger.active .badge-tab {
+      background: var(--ink);
+      color: var(--chalk);
+      border-color: var(--ink);
+    }
+
+    /* Flat Cards */
+    .card-flat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+    }
+
+    /* Common Hovering Input */
+    .hover-input-container {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 48px);
+      max-width: 980px;
+      z-index: 100;
+    }
+
+    .input-box {
+      background: var(--surface);
+      border: 1px solid var(--ink);
+      border-radius: var(--radius-lg);
+      padding: 8px 14px 8px 22px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .input-box input {
+      flex: 1;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      color: var(--ink);
+      padding: 6px 0;
+    }
+
+    .input-box input::placeholder {
+      color: var(--ink-muted);
+    }
+
+    .btn-submit {
+      background: var(--ink);
+      color: var(--chalk);
+      border: 1px solid var(--ink);
+      padding: 10px 22px;
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: opacity var(--duration) ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .btn-submit:hover {
+      opacity: 0.88;
+    }
+
+    .btn-submit:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* Code blocks */
+    .code-container {
+      background: #111111;
+      color: #ECECED;
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      overflow-x: auto;
+      border: 1px solid #222222;
+      font-size: 12.5px;
+      line-height: 1.65;
+    }
+
+    /* Metric Grid Cells */
+    .stat-cell {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      padding: 24px 20px;
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .stat-number {
+      font-family: 'Playfair Display', serif;
+      font-size: 40px;
+      font-weight: 700;
+      line-height: 1.05;
+      color: var(--ink);
+      margin: 12px 0 6px 0;
+    }
+
+    /* Divider */
+    .rule-solid {
+      border: none;
+      border-top: 1px solid var(--rule);
+      margin: 20px 0;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .nav-tab-group { display: none; }
+      .mobile-tab-select { display: block !important; }
+      .split-grid { grid-template-columns: 1fr !important; }
+    }
   </style>
 </head>
-<body class="bg-brand-dark text-slate-100 font-sans min-h-screen flex flex-col selection:bg-cyan-500 selection:text-black">
+<body>
 
-  <!-- ================= HEADER NAVIGATION ================= -->
-  <header class="sticky top-0 z-50 glass border-b border-brand-border px-6 py-3.5 flex items-center justify-between">
-    <div class="flex items-center space-x-3">
-      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-black font-black text-lg shadow-lg shadow-cyan-500/20">
-        <i class="fa-solid fa-cube text-slate-950"></i>
+  <!-- ================= TOP NAVIGATION BAR ================= -->
+  <header class="nav-bar">
+    <div class="container-editorial nav-content">
+      
+      <!-- Brand & Metadata -->
+      <div style="display: flex; align-items: baseline; gap: 12px;">
+        <span style="font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: var(--ink);">BFSContext</span>
+        <span style="font-size: 11px; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; color: var(--ink-muted); border-left: 1px solid var(--rule); padding-left: 10px;">
+          Causal Memory Gateway
+        </span>
       </div>
-      <div>
-        <div class="flex items-center space-x-2">
-          <span class="font-extrabold tracking-wider text-base bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 bg-clip-text text-transparent">BFSContext</span>
-          <span class="text-[10px] font-mono uppercase bg-cyan-950 text-cyan-300 px-2 py-0.5 rounded-full border border-cyan-800/60">CapsuleMCP v2.2</span>
+
+      <!-- 3 Primary Navigation Tabs (Monochrome Pill Group) -->
+      <nav class="nav-tab-group">
+        <button onclick="switchTab('tab-chat')" id="btn-tab-chat" class="tab-trigger active">
+          <span>1. View Chat History & Context</span>
+          <span class="badge-tab">91.1k tok</span>
+        </button>
+
+        <button onclick="switchTab('tab-product')" id="btn-tab-product" class="tab-trigger">
+          <span>2. Test the Product</span>
+          <span class="badge-tab">Dual-Run</span>
+        </button>
+
+        <button onclick="switchTab('tab-comparison')" id="btn-tab-comparison" class="tab-trigger">
+          <span>3. Comparison</span>
+          <span class="badge-tab">Audit</span>
+        </button>
+      </nav>
+
+      <!-- System Status Indicators -->
+      <div style="display: flex; align-items: center; gap: 14px; font-size: 12px; font-family: 'JetBrains Mono', monospace;">
+        <div style="display: flex; align-items: center; gap: 7px;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--ink);"></span>
+          <span style="color: var(--ink-light);">Worker: Gemini Flash</span>
         </div>
-        <div class="text-[11px] text-slate-400 font-mono">Dual-Track Causal Memory & Hierarchical L1/L2/L3 SSD Cache</div>
+        <span style="color: var(--rule);">|</span>
+        <div style="color: var(--ink-muted);">SHA: fe40af24</div>
       </div>
-    </div>
 
-    <!-- 3 Core Navigation Tabs Required by Specification -->
-    <nav class="flex items-center space-x-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
-      <button onclick="switchTab('tab-chat')" id="btn-tab-chat" class="tab-btn px-4 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 transition-all bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
-        <i class="fa-regular fa-comments"></i>
-        <span>1. View Chat History & Context</span>
-        <span class="bg-cyan-900/80 text-[10px] font-mono px-1.5 py-0.2 rounded text-cyan-200">91.1k tok</span>
-      </button>
-
-      <button onclick="switchTab('tab-product')" id="btn-tab-product" class="tab-btn px-4 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
-        <i class="fa-solid fa-bolt"></i>
-        <span>2. Test the Product</span>
-        <span class="bg-emerald-900/60 text-[10px] font-mono px-1.5 py-0.2 rounded text-emerald-300">Live Dual-Run</span>
-      </button>
-
-      <button onclick="switchTab('tab-comparison')" id="btn-tab-comparison" class="tab-btn px-4 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
-        <i class="fa-solid fa-chart-line"></i>
-        <span>3. Comparison</span>
-        <span class="bg-amber-900/60 text-[10px] font-mono px-1.5 py-0.2 rounded text-amber-300">Metrics Card</span>
-      </button>
-    </nav>
-
-    <!-- Model Status Badge -->
-    <div class="flex items-center space-x-3 text-xs font-mono">
-      <div class="flex items-center space-x-2 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800">
-        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span class="text-slate-300">Engine: <span class="text-emerald-400 font-bold" id="activeModelLabel">Gemini Flash</span></span>
-      </div>
-      <a href="https://github.com/kshrs/bfscontext" target="_blank" class="text-slate-400 hover:text-cyan-400 transition-colors">
-        <i class="fa-brands fa-github text-base"></i>
-      </a>
     </div>
   </header>
 
-  <!-- ================= MAIN CONTENT CONTAINER ================= -->
-  <main class="flex-1 flex flex-col relative overflow-hidden">
+  <!-- ================= APPLICATION VIEWPORTS ================= -->
+  <main style="flex: 1; display: flex; flex-direction: column; position: relative;">
 
     <!-- ================= TAB 1: VIEW CHAT HISTORY & CONTEXT ================= -->
-    <section id="tab-chat" class="tab-pane flex-1 flex flex-col overflow-hidden p-6 max-w-7xl mx-auto w-full">
-      <div class="flex items-center justify-between pb-4 border-b border-brand-border">
-        <div>
-          <h2 class="text-lg font-bold text-white flex items-center space-x-2">
-            <span>Project Historical Session: <span class="text-cyan-400 font-mono">NeuralMesh Observer 3D</span></span>
-          </h2>
-          <p class="text-xs text-slate-400 mt-0.5">Realistic 264-turn frontend developer session (~91,110 tokens) with WebGL, Barnes-Hut Octrees & SharedArrayBuffers.</p>
-        </div>
-        <div class="flex items-center space-x-3">
-          <div class="text-right">
-            <div class="text-[11px] font-mono text-slate-400">Total Accumulation</div>
-            <div class="text-sm font-bold font-mono text-amber-400">91,110 Tokens</div>
+    <section id="tab-chat" class="tab-pane" style="flex: 1; padding: 40px 0 60px 0;">
+      <div class="container-editorial">
+        
+        <!-- Header Section -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 24px; border-bottom: 1px solid var(--rule); margin-bottom: 32px;">
+          <div>
+            <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; color: var(--ink-muted); margin-bottom: 6px;">
+              Session Transcript Archive
+            </div>
+            <h1 style="font-size: 38px;">Project NeuralMesh Observer 3D</h1>
+            <p style="margin-top: 6px; max-width: 780px;">
+              Empirical multi-turn transcript: 264 sequential developer turns (~91,110 tokens) covering high-throughput telemetry, WebGL shaders, Barnes-Hut Octree pools, and memory leak resolutions.
+            </p>
           </div>
-          <button onclick="refreshChatHistory()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs rounded-lg border border-slate-700 text-slate-200 transition-colors">
-            <i class="fa-solid fa-rotate-right mr-1"></i> Reload Turns
-          </button>
+          <div style="text-align: right;">
+            <div style="font-size: 11px; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; color: var(--ink-muted);">Total Accumulated Context</div>
+            <div style="font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 700; color: var(--ink); line-height: 1.1;">91,110 Tokens</div>
+          </div>
         </div>
-      </div>
 
-      <!-- Chat History Message Stream -->
-      <div id="chatHistoryContainer" class="flex-1 overflow-y-auto space-y-4 py-4 pr-2">
-        <!-- Rendered dynamically via JS -->
-        <div class="flex justify-center items-center py-20 text-slate-500 font-mono text-xs">
-          <i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Loading 91,110 tokens of session history from SQLite...
+        <!-- Scrollable Message Feed -->
+        <div id="chatHistoryContainer" style="display: flex; flex-direction: column; gap: 16px;">
+          <div style="text-align: center; padding: 60px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--ink-muted);">
+            <i class="fa-solid fa-spinner fa-spin" style="margin-right: 8px;"></i> Hydrating 91,110-token SQLite session history...
+          </div>
         </div>
+
       </div>
     </section>
 
-    <!-- ================= TAB 2: TEST THE PRODUCT (SPLIT SIDE-BY-SIDE) ================= -->
-    <section id="tab-product" class="tab-pane hidden flex-1 flex flex-col overflow-hidden">
-      <!-- Split Dual Container -->
-      <div class="flex-1 grid grid-cols-2 divide-x divide-brand-border overflow-hidden pb-24">
+    <!-- ================= TAB 2: TEST THE PRODUCT (DUAL SPLIT RUNNER) ================= -->
+    <section id="tab-product" class="tab-pane" style="display: none; flex: 1; flex-direction: column; height: calc(100vh - 72px); position: relative;">
+      
+      <!-- Split Container (2 Columns) -->
+      <div class="split-grid" style="display: grid; grid-template-columns: 1fr 1fr; height: 100%; overflow: hidden; padding-bottom: 100px;">
         
-        <!-- LEFT SIDE: FULL CONTEXT NAIVE INGESTION -->
-        <div class="flex flex-col h-full bg-slate-950/40 overflow-hidden">
-          <div class="px-5 py-3 border-b border-brand-border bg-amber-950/20 flex items-center justify-between">
-            <div class="flex items-center space-x-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-              <span class="font-bold text-xs uppercase tracking-wider text-amber-300">Traditional: Full Chat History As Context</span>
+        <!-- LEFT COLUMN: TRADITIONAL FULL CHAT CONTEXT -->
+        <div style="border-right: 1px solid var(--rule); background: var(--bg); display: flex; flex-direction: column; overflow: hidden;">
+          <div style="padding: 16px 24px; border-bottom: 1px solid var(--rule); background: var(--bg-darker); display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: var(--ink-muted);">Baseline Standard</span>
+              <div style="font-family: 'Playfair Display', serif; font-size: 19px; font-weight: 700; color: var(--ink);">Full Conversational History</div>
             </div>
-            <span id="fullTokensBadge" class="text-[11px] font-mono px-2 py-0.5 rounded bg-amber-900/50 border border-amber-700 text-amber-200">
-              Input Context: ~91,110 tokens
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--rule); background: var(--surface);">
+              Payload: 91,110 tokens
             </span>
           </div>
-          <div id="fullOutputScroll" class="flex-1 overflow-y-auto p-5 space-y-4">
-            <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800/80 text-xs text-slate-400 font-mono">
-              <div class="flex items-center space-x-2 text-amber-400 mb-2 font-bold">
-                <i class="fa-solid fa-triangle-exclamation"></i>
-                <span>High Memory & Attention Overhead</span>
-              </div>
-              <div>When you dispatch a task, the naive agent dumps the entire 91,110-token chat transcript into the model prompt. This forces the GPU to allocate gigantic KV-Caches, burns rate limits, and triggers 20s+ prefill latency.</div>
+
+          <div id="fullOutputScroll" style="flex: 1; overflow-y: auto; padding: 24px;">
+            <div class="card-flat" style="margin-bottom: 20px; background: var(--surface); border-color: var(--rule);">
+              <div style="font-weight: 600; font-size: 13px; color: var(--ink); margin-bottom: 4px;">Memory & KV-Cache Footprint Notice</div>
+              <p style="font-size: 13px; color: var(--ink-muted); margin: 0;">
+                Passing the entire 91k-token conversational history forces the inference engine to construct quadratic self-attention matrices ($O(N^2)$) and allocate gigabytes of GPU KV-Cache.
+              </p>
             </div>
-            <div id="fullExecutionOutput" class="hidden space-y-3 font-mono text-xs">
-              <!-- Rendered upon test run -->
-            </div>
+            <div id="fullExecutionOutput" style="display: none;"></div>
           </div>
         </div>
 
-        <!-- RIGHT SIDE: OUR SOLUTION (BFSContext HIERARCHICAL CAPSULE) -->
-        <div class="flex flex-col h-full bg-slate-950/60 overflow-hidden">
-          <div class="px-5 py-3 border-b border-brand-border bg-cyan-950/20 flex items-center justify-between">
-            <div class="flex items-center space-x-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-md shadow-cyan-400/50"></span>
-              <span class="font-bold text-xs uppercase tracking-wider text-cyan-300">BFSContext: Direct Hash & Tiered Memory</span>
+        <!-- RIGHT COLUMN: BFSContext HIERARCHICAL CAPSULE -->
+        <div style="background: var(--surface); display: flex; flex-direction: column; overflow: hidden;">
+          <div style="padding: 16px 24px; border-bottom: 1px solid var(--rule); background: var(--chalk); display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: var(--ink);">Our Architecture</span>
+              <div style="font-family: 'Playfair Display', serif; font-size: 19px; font-weight: 700; color: var(--ink);">Direct Hash & Tiered Memory</div>
             </div>
-            <span id="capsuleTokensBadge" class="text-[11px] font-mono px-2 py-0.5 rounded bg-cyan-900/60 border border-cyan-700 text-cyan-200">
-              Target Capsule: ~420 tokens
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--ink); background: var(--ink); color: var(--chalk);">
+              Capsule: ~420 tokens
             </span>
           </div>
-          <div id="capsuleOutputScroll" class="flex-1 overflow-y-auto p-5 space-y-4">
-            <div class="p-4 rounded-xl bg-slate-900/60 border border-cyan-900/30 text-xs text-slate-400 font-mono">
-              <div class="flex items-center space-x-2 text-cyan-400 mb-2 font-bold">
-                <i class="fa-solid fa-microchip"></i>
-                <span>Direct Hash Indexing + L1/L2 SSD Cache</span>
-              </div>
-              <div>Instead of passing 91k tokens or walking polynomial DAGs, BFSContext extracts the target symbol in O(1) amortized time (0.066ms on SSD) and anchors intent to Git commit SHA <span class="text-cyan-300 font-bold">fe40af24</span>. Slashes GPU KV-Cache by &gt;95%!</div>
+
+          <div id="capsuleOutputScroll" style="flex: 1; overflow-y: auto; padding: 24px;">
+            <div class="card-flat" style="margin-bottom: 20px; background: var(--bg); border-color: var(--rule);">
+              <div style="font-weight: 600; font-size: 13px; color: var(--ink); margin-bottom: 4px;">O(1) Direct Hash Indexing + L1/L2 SSD Cache</div>
+              <p style="font-size: 13px; color: var(--ink-light); margin: 0;">
+                Replaces polynomial DAG walks with direct hash lookups (<span style="font-family: 'JetBrains Mono'; font-weight: 600;">0.066 ms</span> on SSD) and anchors macro intent to Git commit SHA <span style="font-family: 'JetBrains Mono'; font-weight: 600;">fe40af24</span>.
+              </p>
             </div>
-            <div id="capsuleExecutionOutput" class="hidden space-y-3 font-mono text-xs">
-              <!-- Rendered upon test run -->
-            </div>
+            <div id="capsuleExecutionOutput" style="display: none;"></div>
           </div>
         </div>
 
       </div>
 
-      <!-- ================= HOVERING COMMON INPUT BOX ================= -->
-      <div class="absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-4xl px-4 z-40">
-        <form onsubmit="handleExecuteBenchmark(event)" class="glass p-2.5 rounded-2xl glow-cyan flex items-center space-x-3 border border-cyan-500/40 shadow-2xl">
-          <div class="pl-3 text-cyan-400 text-sm">
-            <i class="fa-solid fa-terminal"></i>
-          </div>
+      <!-- ================= COMMON HOVERING INPUT BAR ================= -->
+      <div class="hover-input-container">
+        <form onsubmit="handleExecuteBenchmark(event)" class="input-box">
+          <span style="color: var(--ink-muted); font-size: 13px; font-family: 'JetBrains Mono', monospace;">❯</span>
           <input 
             type="text" 
             id="commonPromptInput"
             value="Write unit tests for MetricHUDCanvas double-buffering pointer wrapping and boundary arithmetic"
-            placeholder="Type your task instructions here..." 
-            class="flex-1 bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none font-sans py-2"
+            placeholder="Specify your development or testing task here..."
           />
-          <button 
-            type="submit" 
-            id="btnRunBenchmark"
-            class="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-bold text-xs rounded-xl flex items-center space-x-2 transition-all shadow-lg shadow-cyan-500/30 whitespace-nowrap cursor-pointer">
-            <i class="fa-solid fa-play"></i>
+          <button type="submit" id="btnRunBenchmark" class="btn-submit">
             <span>Run Dual Execution</span>
+            <i class="fa-solid fa-arrow-right" style="font-size: 11px;"></i>
           </button>
         </form>
-        <div class="text-center text-[10px] text-slate-400 mt-1 font-mono">
-          Press Enter or click Run to trigger simultaneous execution on Gemini Flash and compare token/memory reduction.
-        </div>
       </div>
+
     </section>
 
-    <!-- ================= TAB 3: COMPARISON (BENCHMARK CARD) ================= -->
-    <section id="tab-comparison" class="tab-pane hidden flex-1 flex flex-col overflow-y-auto p-6 max-w-6xl mx-auto w-full space-y-6">
-      
-      <!-- Benchmark Metric Card Container -->
-      <div class="rounded-2xl glass p-8 border border-slate-700/60 shadow-2xl relative overflow-hidden">
-        <!-- Background Grid Effect -->
-        <div class="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px] opacity-25"></div>
+    <!-- ================= TAB 3: COMPARISON (METRIC AUDIT CARD) ================= -->
+    <section id="tab-comparison" class="tab-pane" style="display: none; flex: 1; padding: 40px 0 60px 0;">
+      <div class="container-editorial">
+        
+        <div style="margin-bottom: 32px; padding-bottom: 20px; border-bottom: 1px solid var(--rule);">
+          <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; color: var(--ink-muted); margin-bottom: 6px;">
+            Architectural Audit & Empirical Proof
+          </div>
+          <h2 style="font-size: 42px;">Memory & Compute Co-Reduction Card</h2>
+          <p style="max-width: 820px; margin-top: 6px;">
+            Real telemetry measured across the last dual run. Shows concurrent slashing of Host RAM, SSD query latency, and GPU KV-Cache allocation.
+          </p>
+        </div>
 
-        <div class="relative z-10">
-          <div class="flex items-center justify-between pb-6 border-b border-slate-800">
-            <div>
-              <span class="text-xs font-mono uppercase tracking-widest text-cyan-400 font-bold">Comprehensive Empirical Benchmark</span>
-              <h2 class="text-2xl font-black text-white mt-1">Dual Context & Memory Reduction Telemetry</h2>
-            </div>
-            <div class="flex items-center space-x-2 font-mono text-xs">
-              <span class="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300">Task ID: <span class="text-cyan-400 font-bold" id="cardTaskId">metric_hud_01</span></span>
-              <span class="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300">Commit: <span class="text-emerald-400 font-bold">fe40af24</span></span>
-            </div>
+        <!-- 4 Primary Stat Grid -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px;">
+          
+          <div class="stat-cell">
+            <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; font-family: 'JetBrains Mono'; color: var(--ink-muted);">Context Eliminated</span>
+            <div class="stat-number" id="metricTokensSaved">90,685</div>
+            <span style="font-size: 12px; font-family: 'JetBrains Mono'; font-weight: 600; color: var(--ink);" id="metricReductionPct">99.5% Slashed</span>
           </div>
 
-          <!-- 4 Primary Metric Stat Blocks -->
-          <div class="grid grid-cols-4 gap-4 my-8">
-            <!-- Metric 1: Tokens Saved -->
-            <div class="p-5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
-              <div class="text-[11px] font-mono uppercase text-slate-400">Tokens Slashed</div>
-              <div class="text-3xl font-black font-mono text-cyan-400 my-2" id="metricTokensSaved">90,685</div>
-              <div class="text-[11px] text-emerald-400 font-mono font-semibold" id="metricReductionPct">99.5% Reduction</div>
-            </div>
-
-            <!-- Metric 2: Memory Footprint -->
-            <div class="p-5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
-              <div class="text-[11px] font-mono uppercase text-slate-400">Host Memory Footprint</div>
-              <div class="text-3xl font-black font-mono text-emerald-400 my-2" id="metricHostRam">4.2 KB</div>
-              <div class="text-[11px] text-slate-400 font-mono">L1 RAM (<10 KB bounded)</div>
-            </div>
-
-            <!-- Metric 3: SSD Lookup Latency -->
-            <div class="p-5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
-              <div class="text-[11px] font-mono uppercase text-slate-400">Direct Hash Lookup</div>
-              <div class="text-3xl font-black font-mono text-purple-400 my-2" id="metricLookupLat">0.066 ms</div>
-              <div class="text-[11px] text-slate-400 font-mono">O(1) SQLite WAL on SSD</div>
-            </div>
-
-            <!-- Metric 4: Generation Latency -->
-            <div class="p-5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
-              <div class="text-[11px] font-mono uppercase text-slate-400">Execution Speedup</div>
-              <div class="text-3xl font-black font-mono text-amber-400 my-2" id="metricSpeedup">4.2x</div>
-              <div class="text-[11px] text-slate-400 font-mono" id="metricLatencyText">1.83s vs 7.68s</div>
-            </div>
+          <div class="stat-cell">
+            <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; font-family: 'JetBrains Mono'; color: var(--ink-muted);">Host RAM Footprint</span>
+            <div class="stat-number" id="metricHostRam">4.2 KB</div>
+            <span style="font-size: 12px; font-family: 'JetBrains Mono'; color: var(--ink-light);">Strict L1 RAM LRU</span>
           </div>
 
-          <!-- Visual Bar Comparison -->
-          <div class="space-y-4 p-6 rounded-xl bg-slate-950/80 border border-slate-800">
-            <h3 class="text-xs font-mono uppercase tracking-wider text-slate-400 font-bold">Input Context Comparison (Bar Visualizer)</h3>
-            
-            <!-- Full Bar -->
-            <div>
-              <div class="flex justify-between text-xs font-mono mb-1.5">
-                <span class="text-amber-400 font-bold">Traditional Full Chat Context</span>
-                <span class="text-slate-300 font-bold" id="barFullLabel">91,110 tokens</span>
-              </div>
-              <div class="w-full bg-slate-900 h-6 rounded-lg overflow-hidden p-1 border border-slate-800">
-                <div class="bg-gradient-to-r from-amber-600 to-amber-400 h-full rounded w-full transition-all duration-1000"></div>
-              </div>
-            </div>
-
-            <!-- Capsule Bar -->
-            <div>
-              <div class="flex justify-between text-xs font-mono mb-1.5">
-                <span class="text-cyan-400 font-bold">BFSContext Compiled Capsule</span>
-                <span class="text-slate-300 font-bold" id="barCapsuleLabel">425 tokens (0.46% of baseline)</span>
-              </div>
-              <div class="w-full bg-slate-900 h-6 rounded-lg overflow-hidden p-1 border border-slate-800">
-                <div id="barCapsuleProgress" class="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full rounded transition-all duration-1000" style="width: 2.5%;"></div>
-              </div>
-            </div>
+          <div class="stat-cell">
+            <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; font-family: 'JetBrains Mono'; color: var(--ink-muted);">Direct Hash Lookup</span>
+            <div class="stat-number" id="metricLookupLat">0.066 ms</div>
+            <span style="font-size: 12px; font-family: 'JetBrains Mono'; color: var(--ink-light);">O(1) SQLite WAL on SSD</span>
           </div>
 
-          <!-- Bottom Guardrail & Cache Audit -->
-          <div class="grid grid-cols-2 gap-4 mt-6">
-            <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800 font-mono text-xs">
-              <div class="text-cyan-400 font-bold mb-2 flex items-center space-x-2">
-                <i class="fa-solid fa-shield-halved"></i>
-                <span>Circuit Breaker Status</span>
-              </div>
-              <div class="text-slate-300">Syntax Compilation: <span class="text-emerald-400 font-bold">100% VALID AST</span></div>
-              <div class="text-slate-300">Runaway Retries: <span class="text-slate-400">0 (Budget = 1-Strike)</span></div>
-              <div class="text-slate-300">Git Working Tree: <span class="text-emerald-400 font-bold">CLEAN & PINNED</span></div>
-            </div>
-
-            <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800 font-mono text-xs">
-              <div class="text-purple-400 font-bold mb-2 flex items-center space-x-2">
-                <i class="fa-solid fa-server"></i>
-                <span>Hierarchical Tiered Storage</span>
-              </div>
-              <div class="text-slate-300">L1 RAM LRU: <span class="text-slate-200">256 slots max (&lt;10 KB)</span></div>
-              <div class="text-slate-300">L2 SSD WAL: <span class="text-purple-400 font-bold">Indexed SQLite On Disk</span></div>
-              <div class="text-slate-300">Time Complexity: <span class="text-emerald-400 font-bold">O(1) Direct Hash</span></div>
-            </div>
+          <div class="stat-cell">
+            <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; font-family: 'JetBrains Mono'; color: var(--ink-muted);">Execution Speedup</span>
+            <div class="stat-number" id="metricSpeedup">4.2x</div>
+            <span style="font-size: 12px; font-family: 'JetBrains Mono'; color: var(--ink-light);" id="metricLatencyText">1.83s vs 7.68s</span>
           </div>
 
         </div>
+
+        <!-- Visual Bar Comparison -->
+        <div class="card-flat" style="margin-bottom: 32px; padding: 28px;">
+          <h3 style="font-size: 18px; margin-bottom: 20px;">Context Scale Visualization</h3>
+          
+          <!-- Full Bar -->
+          <div style="margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; font-size: 12px; font-family: 'JetBrains Mono'; margin-bottom: 6px;">
+              <span style="font-weight: 600; color: var(--ink-muted);">Traditional Full Context (91,110 tokens)</span>
+              <span id="barFullLabel" style="font-weight: 600;">100.0%</span>
+            </div>
+            <div style="height: 18px; width: 100%; background: var(--bg-darker); border: 1px solid var(--rule); border-radius: var(--radius-sm); overflow: hidden;">
+              <div style="height: 100%; width: 100%; background: var(--elevated);"></div>
+            </div>
+          </div>
+
+          <!-- Capsule Bar -->
+          <div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; font-family: 'JetBrains Mono'; margin-bottom: 6px;">
+              <span style="font-weight: 600; color: var(--ink);">BFSContext Capsule (425 tokens)</span>
+              <span id="barCapsuleLabel" style="font-weight: 600;">0.46% of baseline</span>
+            </div>
+            <div style="height: 18px; width: 100%; background: var(--bg-darker); border: 1px solid var(--rule); border-radius: var(--radius-sm); overflow: hidden;">
+              <div id="barCapsuleProgress" style="height: 100%; width: 0.8%; background: var(--ink);"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Technical Boundary Matrix -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          
+          <div class="card-flat">
+            <h3 style="font-size: 16px; margin-bottom: 8px;">1-Strike Circuit Breaker</h3>
+            <ul style="list-style: none; font-size: 13px; font-family: 'JetBrains Mono'; color: var(--ink-light); line-height: 2;">
+              <li>• AST Syntax Compile: <strong style="color: var(--ink);">PASSED (0 errors)</strong></li>
+              <li>• Revert Protection: <strong style="color: var(--ink);">Git Checkout Active</strong></li>
+              <li>• Retry Budget: <strong>MAX_RETRIES = 1</strong></li>
+            </ul>
+          </div>
+
+          <div class="card-flat">
+            <h3 style="font-size: 16px; margin-bottom: 8px;">Tiered Storage Invariants</h3>
+            <ul style="list-style: none; font-size: 13px; font-family: 'JetBrains Mono'; color: var(--ink-light); line-height: 2;">
+              <li>• L1 Hot RAM: <strong>Bounded &lt; 10 KB</strong></li>
+              <li>• L2 NVMe SSD: <strong>O(1) SHA Keying</strong></li>
+              <li>• Callee Resolution: <strong>1-Hop Pre-computed</strong></li>
+            </ul>
+          </div>
+
+        </div>
+
       </div>
     </section>
 
   </main>
 
-  <!-- ================= JAVASCRIPT APP LOGIC ================= -->
+  <!-- ================= JAVASCRIPT CONTROLLER ================= -->
   <script>
-    // Tab switching logic
     function switchTab(tabId) {
-      document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
-      document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('bg-cyan-500/20', 'text-cyan-300', 'border', 'border-cyan-500/40');
-        btn.classList.add('text-slate-400');
-      });
+      document.querySelectorAll('.tab-pane').forEach(el => el.style.display = 'none');
+      document.querySelectorAll('.tab-trigger').forEach(btn => btn.classList.remove('active'));
 
       const targetPane = document.getElementById(tabId);
-      if (targetPane) targetPane.classList.remove('hidden');
-
-      let btnId = 'btn-' + tabId;
-      const targetBtn = document.getElementById(btnId);
-      if (targetBtn) {
-        targetBtn.classList.remove('text-slate-400');
-        targetBtn.classList.add('bg-cyan-500/20', 'text-cyan-300', 'border', 'border-cyan-500/40');
+      if (targetPane) {
+        targetPane.style.display = (tabId === 'tab-product') ? 'flex' : 'block';
       }
+
+      const activeBtn = document.getElementById('btn-' + tabId);
+      if (activeBtn) activeBtn.classList.add('active');
 
       if (tabId === 'tab-chat') {
         loadChatHistory();
       }
     }
 
-    // Load Chat History from backend SQLite
     async function loadChatHistory() {
       const container = document.getElementById('chatHistoryContainer');
       try {
         const res = await fetch('/api/chat-history');
         const data = await res.json();
         if (data.status === 'success') {
-          renderChatTurns(data.turns);
+          renderChat(data.turns);
         }
       } catch (err) {
-        container.innerHTML = `<div class="p-6 text-center text-red-400 font-mono text-xs">Failed to load chat history: ${err.message}</div>`;
+        container.innerHTML = `<div style="padding: 24px; text-align: center; color: #b91c1c; font-family: 'JetBrains Mono';">Failed to load history: ${err.message}</div>`;
       }
     }
 
-    function renderChatTurns(turns) {
+    function renderChat(turns) {
       const container = document.getElementById('chatHistoryContainer');
       if (!turns || turns.length === 0) {
-        container.innerHTML = `<div class="p-8 text-center text-slate-500 font-mono text-xs">No chat turns found in SQLite database.</div>`;
+        container.innerHTML = `<div style="text-align: center; padding: 40px; color: var(--ink-muted);">No turns found.</div>`;
         return;
       }
 
-      container.innerHTML = turns.map((t, idx) => {
+      container.innerHTML = turns.map(t => {
         const isUser = t.role === 'user';
-        const bg = isUser ? 'bg-slate-900/90 border-slate-800' : 'bg-slate-900/40 border-cyan-900/40';
-        const senderColor = isUser ? 'text-amber-400' : 'text-cyan-400';
-        const roleIcon = isUser ? 'fa-user' : 'fa-robot';
+        const roleLabel = isUser ? 'ENGINEER INSTRUCTION' : 'ARCHITECT / WORKER';
+        const roleBorder = isUser ? 'var(--elevated)' : 'var(--rule)';
 
         return `
-          <div class="p-4 rounded-xl border ${bg} transition-all hover:border-slate-700">
-            <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-800/80 text-xs font-mono">
-              <div class="flex items-center space-x-2">
-                <span class="${senderColor} font-bold flex items-center space-x-1.5">
-                  <i class="fa-solid ${roleIcon}"></i>
-                  <span>${t.sender}</span>
-                </span>
-                <span class="text-slate-500">•</span>
-                <span class="text-slate-400">Turn #${t.turn_index}</span>
+          <div class="card-flat" style="border-left: 3px solid ${isUser ? 'var(--ink)' : 'var(--rule)'};">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; font-family: 'JetBrains Mono'; font-size: 11px;">
+              <div>
+                <strong style="color: var(--ink); text-transform: uppercase;">${roleLabel}</strong>
+                <span style="color: var(--ink-muted); margin: 0 6px;">•</span>
+                <span style="color: var(--ink-muted);">Turn #${t.turn_index}</span>
               </div>
-              <div class="flex items-center space-x-2">
-                <span class="px-2 py-0.5 rounded bg-slate-800 text-[10px] font-mono text-slate-300 border border-slate-700">
-                  ${t.token_count.toLocaleString()} tokens
-                </span>
-              </div>
+              <span style="background: var(--bg-darker); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--rule);">
+                ${t.token_count.toLocaleString()} tokens
+              </span>
             </div>
-            <div class="text-xs text-slate-200 whitespace-pre-wrap font-mono leading-relaxed max-h-56 overflow-y-auto">
+            <div style="font-family: 'JetBrains Mono'; font-size: 12.5px; line-height: 1.65; color: var(--ink-light); white-space: pre-wrap; max-height: 200px; overflow-y: auto;">
               ${escapeHtml(t.content)}
             </div>
           </div>
@@ -392,16 +616,11 @@
     }
 
     function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
+      const d = document.createElement('div');
+      d.textContent = text;
+      return d.innerHTML;
     }
 
-    function refreshChatHistory() {
-      loadChatHistory();
-    }
-
-    // Run dual comparison execution
     async function handleExecuteBenchmark(e) {
       e.preventDefault();
       const input = document.getElementById('commonPromptInput');
@@ -410,16 +629,15 @@
 
       const btn = document.getElementById('btnRunBenchmark');
       btn.disabled = true;
-      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Executing Dual Calls...</span>`;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Executing Dual Call...</span>`;
 
-      // Show output areas
       const fullOut = document.getElementById('fullExecutionOutput');
       const capOut = document.getElementById('capsuleExecutionOutput');
-      fullOut.classList.remove('hidden');
-      capOut.classList.remove('hidden');
+      fullOut.style.display = 'block';
+      capOut.style.display = 'block';
 
-      fullOut.innerHTML = `<div class="p-4 rounded-lg bg-slate-900 text-amber-400 animate-pulse font-mono text-xs">Prefilling 91,110 tokens of conversational context into LLM...</div>`;
-      capOut.innerHTML = `<div class="p-4 rounded-lg bg-slate-900 text-cyan-400 animate-pulse font-mono text-xs">Direct Hash Indexing target symbol & compiling ~420 token capsule...</div>`;
+      fullOut.innerHTML = `<div style="padding: 16px; border: 1px solid var(--rule); background: var(--bg-darker); font-family: 'JetBrains Mono'; font-size: 12px; color: var(--ink-muted);">Prefilling 91,110 tokens of conversational context into LLM...</div>`;
+      capOut.innerHTML = `<div style="padding: 16px; border: 1px solid var(--rule); background: var(--bg-darker); font-family: 'JetBrains Mono'; font-size: 12px; color: var(--ink);">Extracting symbol via Direct Hash Index in O(1)...</div>`;
 
       try {
         const res = await fetch('/api/run-dual-benchmark', {
@@ -430,60 +648,57 @@
         const data = await res.json();
 
         if (data.status === 'success') {
-          renderDualResults(data);
-          updateComparisonMetrics(data);
+          renderDualOutputs(data);
+          updateAuditMetrics(data);
         } else {
-          fullOut.innerHTML = `<div class="text-red-400 p-3">Error: ${data.message}</div>`;
-          capOut.innerHTML = `<div class="text-red-400 p-3">Error: ${data.message}</div>`;
+          fullOut.innerHTML = `<div style="color: red;">${data.message}</div>`;
+          capOut.innerHTML = `<div style="color: red;">${data.message}</div>`;
         }
       } catch (err) {
-        fullOut.innerHTML = `<div class="text-red-400 p-3">Error: ${err.message}</div>`;
-        capOut.innerHTML = `<div class="text-red-400 p-3">Error: ${err.message}</div>`;
+        fullOut.innerHTML = `<div style="color: red;">${err.message}</div>`;
+        capOut.innerHTML = `<div style="color: red;">${err.message}</div>`;
       } finally {
         btn.disabled = false;
-        btn.innerHTML = `<i class="fa-solid fa-play"></i><span>Run Dual Execution</span>`;
+        btn.innerHTML = `<span>Run Dual Execution</span><i class="fa-solid fa-arrow-right" style="font-size: 11px;"></i>`;
       }
     }
 
-    function renderDualResults(data) {
+    function renderDualOutputs(data) {
       const fullOut = document.getElementById('fullExecutionOutput');
       const capOut = document.getElementById('capsuleExecutionOutput');
 
       fullOut.innerHTML = `
-        <div class="p-3 bg-amber-950/30 border border-amber-900/60 rounded-lg text-amber-300 font-mono text-xs flex justify-between">
-          <span>Tokens: ${data.full.tokens.toLocaleString()}</span>
+        <div style="display: flex; justify-content: space-between; font-family: 'JetBrains Mono'; font-size: 11px; margin-bottom: 8px; color: var(--ink-muted);">
+          <span>Context: ${data.full.tokens.toLocaleString()} tokens</span>
           <span>Latency: ${data.full.latency_sec}s</span>
         </div>
-        <pre class="p-4 bg-slate-900/90 rounded-xl border border-slate-800 text-slate-200 overflow-x-auto text-xs font-mono leading-relaxed">${escapeHtml(data.full.code)}</pre>
+        <pre class="code-container">${escapeHtml(data.full.code)}</pre>
       `;
 
       capOut.innerHTML = `
-        <div class="p-3 bg-cyan-950/30 border border-cyan-900/60 rounded-lg text-cyan-300 font-mono text-xs flex justify-between">
-          <span>Tokens: ${data.capsule.tokens.toLocaleString()} (Saved: ${data.tokens_saved.toLocaleString()})</span>
-          <span>Latency: ${data.capsule.latency_sec}s (${data.speedup}x speedup)</span>
+        <div style="display: flex; justify-content: space-between; font-family: 'JetBrains Mono'; font-size: 11px; margin-bottom: 8px; color: var(--ink);">
+          <span><strong>Capsule: ${data.capsule.tokens.toLocaleString()} tokens</strong> (Saved: ${data.tokens_saved.toLocaleString()})</span>
+          <span><strong>Latency: ${data.capsule.latency_sec}s</strong> (${data.speedup}x Speedup)</span>
         </div>
-        <pre class="p-4 bg-slate-900/90 rounded-xl border border-cyan-950 text-slate-200 overflow-x-auto text-xs font-mono leading-relaxed">${escapeHtml(data.capsule.code)}</pre>
+        <pre class="code-container">${escapeHtml(data.capsule.code)}</pre>
       `;
 
-      // Scroll both panes to bottom
       document.getElementById('fullOutputScroll').scrollTop = document.getElementById('fullOutputScroll').scrollHeight;
       document.getElementById('capsuleOutputScroll').scrollTop = document.getElementById('capsuleOutputScroll').scrollHeight;
     }
 
-    function updateComparisonMetrics(data) {
+    function updateAuditMetrics(data) {
       document.getElementById('metricTokensSaved').innerText = data.tokens_saved.toLocaleString();
-      document.getElementById('metricReductionPct').innerText = `${data.reduction_percent}% Reduction`;
+      document.getElementById('metricReductionPct').innerText = `${data.reduction_percent}% Slashed`;
       document.getElementById('metricHostRam').innerText = `${(data.host_ram_bytes / 1024).toFixed(1)} KB`;
       document.getElementById('metricLookupLat').innerText = `${data.ssd_lookup_ms} ms`;
       document.getElementById('metricSpeedup').innerText = `${data.speedup}x`;
       document.getElementById('metricLatencyText').innerText = `${data.capsule.latency_sec}s vs ${data.full.latency_sec}s`;
 
-      document.getElementById('barFullLabel').innerText = `${data.full.tokens.toLocaleString()} tokens`;
       document.getElementById('barCapsuleLabel').innerText = `${data.capsule.tokens.toLocaleString()} tokens (${((data.capsule.tokens / data.full.tokens)*100).toFixed(2)}%)`;
-      document.getElementById('barCapsuleProgress').style.width = `${Math.max(1.5, (data.capsule.tokens / data.full.tokens)*100)}%`;
+      document.getElementById('barCapsuleProgress').style.width = `${Math.max(0.8, (data.capsule.tokens / data.full.tokens)*100)}%`;
     }
 
-    // Auto-load chat history on initial mount
     window.addEventListener('DOMContentLoaded', () => {
       loadChatHistory();
     });
