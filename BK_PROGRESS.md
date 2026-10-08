@@ -6,7 +6,7 @@
 
 ---
 
-## 📋 Milestone Tracker
+## 📋 Milestone Tracker & Deliverable Summary
 
 ### Milestone 1: Environment & Git Setup
 - **Planned:**
@@ -16,7 +16,7 @@
   - Create `requirements.txt` and `.env.example`
   - Establish `BK_PROGRESS.md`
 - **Status:** ✅ Completed
-- **Next:** Milestone 2 (TDD Setup & Isolated Unit Tests)
+- **Commit:** `chore(env): initialize venv, requirements, and git guardrails`
 
 ---
 
@@ -26,8 +26,8 @@
   - Dynamic `sys.modules` isolation harness mocking `capsule_engine`, `circuit_breaker`, `telemetry`, and `litellm.completion`
   - Cover valid execution, circuit breaker tripping & rollback handling, and auto-fixer delegation
   - Verify test suite runs (Red Stage)
-- **Status:** ✅ Completed (Red stage verified: 4 failing tests awaiting module implementation)
-- **Next:** Milestone 3 (Implementation of `capsule_mcp.py`)
+- **Status:** ✅ Completed (Red stage verified with 4 failing tests prior to implementation)
+- **Commit:** `test(mcp): add isolated unit tests for delegate_with_capsule`
 
 ---
 
@@ -39,7 +39,7 @@
   - Orchestrate capsule generation -> LLM dispatch -> guardrail validation -> filesystem artifact write -> telemetry logging
   - Run pytest suite until all tests pass (Green Stage)
 - **Status:** ✅ Completed (6/6 unit tests passing across all success, repair, circuit breaker, and exception scenarios)
-- **Next:** Milestone 4 (MCP Client Configuration)
+- **Commit:** `feat(mcp): implement delegate_with_capsule FastMCP server`
 
 ---
 
@@ -47,7 +47,7 @@
 - **Planned:**
   - Create `mcp_config.json` with stdio transport configuration for `agy CLI` and `claude-code` integration
 - **Status:** ✅ Completed (`mcp_config.json` configured with stdio launcher for `bfscontext-gateway`)
-- **Next:** Milestone 5 (Refactor, Cleanup & Final Audit)
+- **Commit:** `feat(config): add mcp_config.json for agy and claude integration`
 
 ---
 
@@ -56,4 +56,38 @@
   - Code optimization and pruning
   - Zero-regression test verification
   - Teammate handoff documentation
-- **Status:** Pending
+- **Status:** ✅ Completed (Audited code, type hints verified, 6/6 tests passing)
+- **Commit:** `refactor(mcp): optimize code quality and prune dead logic`
+
+---
+
+## 🧪 Test Verification
+
+All unit tests run inside an isolated dynamic mocking harness, ensuring BK's gateway operates independently of teammates' development velocity:
+
+```text
+tests/test_capsule_mcp.py::test_capsule_mcp_module_exists PASSED         [ 16%]
+tests/test_capsule_mcp.py::test_delegate_with_capsule_success PASSED     [ 33%]
+tests/test_capsule_mcp.py::test_delegate_with_capsule_circuit_breaker_tripped PASSED [ 50%]
+tests/test_capsule_mcp.py::test_fixer_llm_callable_delegation PASSED     [ 66%]
+tests/test_capsule_mcp.py::test_delegate_with_capsule_repaired_success PASSED [ 83%]
+tests/test_capsule_mcp.py::test_delegate_with_capsule_llm_exception PASSED [100%]
+============================== 6 passed in 6.90s ==============================
+```
+
+---
+
+## 🤝 Teammate Integration Guide (When Merging)
+
+When `kshrs` (`capsule_engine.py`), `nvss` (`circuit_breaker.py`), and `ashb` (`telemetry.py`) push their modules:
+
+1. Copy `.env.example` to `.env` and provide your API keys:
+   ```bash
+   cp .env.example .env
+   # Add OPENROUTER_API_KEY / NVIDIA_API_KEY
+   ```
+2. Start the MCP server:
+   ```bash
+   py -m capsule_mcp
+   ```
+3. Test using `agy CLI` or any MCP client referencing `mcp_config.json`.

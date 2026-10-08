@@ -13,6 +13,9 @@ import types
 from unittest.mock import MagicMock, patch
 import pytest
 
+# Ensure repository root is in sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 # ---------------------------------------------------------------------------
 # Dynamic Isolation Harness: Mock teammate modules before importing capsule_mcp
 # ---------------------------------------------------------------------------
@@ -214,3 +217,88 @@ def test_fixer_llm_callable_delegation():
         assert broken_code in user_content
         assert error_msg in user_content
         assert fixed_output == repaired_code_markdown
+
+
+def test_delegate_with_capsule_repaired_success(tmp_path):
+    """
+    Test 4: Circuit breaker auto-repairs code on 1st attempt.
+    Ensures file is written with repaired code, guardrail status is 'REPAIRED',
+    and success is returned.
+    """
+    target_file = str(tmp_path / "src" / "repaired_feature.py")
+    subtask = "Fix broken syntax function"
+    intent = "Auto-repair test"
+
+    mock_generate_context_capsule.return_value = {
+        "capsule_prompt": "Repair task prompt",
+        "commit_sha": "def5678",
+        "raw_file_tokens": 1000,
+        "capsule_tokens": 100,
+        "tokens_saved": 900,
+        "compression_ratio": 0.90,
+    }
+
+    fake_llm_response = MagicMock()
+    fake_llm_response.choices = [
+        MagicMock(message=MagicMock(content="def bad_syntax(): pass"))
+    ]
+
+    mock_validate_and_safeguard.return_value = {
+        "status": "REPAIRED",
+        "clean_code": "def bad_syntax():\n    pass\n",
+        "syntax_valid": True,
+        "auto_fix_attempted": True,
+        "rolled_back": False,
+        "error_message": None,
+        "target_file_path": target_file,
+    }
+
+    with patch("capsule_mcp.litellm.completion", return_value=fake_llm_response):
+        result = capsule_mcp.delegate_with_capsule(
+            target_file=target_file,
+            subtask=subtask,
+            intent=intent,
+        )
+
+        assert os.path.exists(target_file)
+        with open(target_file, "r", encoding="utf-8") as f:
+            assert f.read() == "def bad_syntax():\n    pass\n"
+
+        mock_log_delegation_metrics.assert_called_once()
+        assert result["status"] == "success"
+        assert result["guardrail_status"] == "REPAIRED"
+        assert result["artifact_written"] == target_file
+
+
+def test_delegate_with_capsule_llm_exception(tmp_path):
+    """
+    Test 5: LiteLLM throws an unexpected exception.
+    Ensures gateway catches the exception, logs telemetry as CIRCUIT_BREAKER_TRIPPED,
+    and returns a graceful failure payload without unhandled crash.
+    """
+    target_file = str(tmp_path / "src" / "unreachable.py")
+    subtask = "Test LLM error handling"
+    intent = "Resilience test"
+
+    mock_generate_context_capsule.return_value = {
+        "capsule_prompt": "Test prompt",
+        "commit_sha": "1234567",
+        "raw_file_tokens": 500,
+        "capsule_tokens": 50,
+        "tokens_saved": 450,
+        "compression_ratio": 0.90,
+    }
+
+    with patch("capsule_mcp.litellm.completion", side_effect=RuntimeError("API Connection Timeout")):
+        result = capsule_mcp.delegate_with_capsule(
+            target_file=target_file,
+            subtask=subtask,
+            intent=intent,
+        )
+
+        assert not os.path.exists(target_file)
+        mock_log_delegation_metrics.assert_called_once()
+        assert result["status"] == "failed"
+        assert result["guardrail_status"] == "CIRCUIT_BREAKER_TRIPPED"
+        assert "API Connection Timeout" in result["error"]
+
