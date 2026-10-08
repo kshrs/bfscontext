@@ -549,8 +549,8 @@
                 <i class="fa-solid fa-code"></i>
                 <span>View Context (JSON)</span>
               </button>
-              <span style="font-family: 'JetBrains Mono'; font-size: 12px; font-weight: 700; padding: 4px 8px; background: var(--hi); color: var(--on-hi);">
-                ~420 tokens
+              <span id="headerCapsuleBadge" style="font-family: 'JetBrains Mono'; font-size: 12px; font-weight: 700; padding: 4px 8px; background: var(--hi); color: var(--on-hi);">
+                325 tokens
               </span>
             </div>
           </div>
@@ -744,8 +744,13 @@
         document.getElementById('totalRunsCount').innerText = `${avg.total_runs || 1} ${avg.total_runs === 1 ? 'Run' : 'Runs'}`;
       }
 
-      const tbody = document.getElementById('runsTableBody');
       const runs = data.runs || [];
+      if (runs.length > 0 && runs[0].capsule_tokens) {
+        const badge = document.getElementById('headerCapsuleBadge');
+        if (badge) badge.innerText = `${runs[0].capsule_tokens.toLocaleString()} tokens`;
+      }
+
+      const tbody = document.getElementById('runsTableBody');
       if (runs.length === 0) {
         tbody.innerHTML = `<tr><td colspan="8" style="padding: 24px; text-align: center; color: var(--mid);">No benchmark runs logged yet. Execute one in "Test the Product"!</td></tr>`;
         return;
@@ -963,6 +968,11 @@
     }
 
     function updateAuditMetrics(data) {
+      if (data.capsule && data.capsule.tokens) {
+        const badge = document.getElementById('headerCapsuleBadge');
+        if (badge) badge.innerText = `${data.capsule.tokens.toLocaleString()} tokens`;
+      }
+
       if (data.averages) {
         const avg = data.averages;
         document.getElementById('metricTokensSaved').innerText = (avg.avg_tokens_saved || data.tokens_saved).toLocaleString();
